@@ -57,7 +57,6 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
       await PreferencesMigration(sharedPreferences: container.read(sharedPreferencesProvider).requireValue).migrate();
     } catch (e, stackTrace) {
       Logger.bootstrap.error("preferences migration failed", e, stackTrace);
-      if (env == Environment.dev) rethrow;
       Logger.bootstrap.info("clearing preferences");
       await container.read(sharedPreferencesProvider).requireValue.clear();
     }
@@ -87,7 +86,7 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   await _init("translations", () => container.read(translationsProvider.future));
 
   await _safeInit("active profile", () => container.read(activeProfileProvider.future), timeout: 1000);
-  await _init("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init());
+  await _safeInit("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init(), timeout: 15000);
 
   if (!kIsWeb) {
     // await _safeInit(
