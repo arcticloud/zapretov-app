@@ -181,3 +181,61 @@ jobs:
           name: ios-ipa
           path: out/
           retention-days: 30
+
+  build-windows:
+    runs-on: windows-latest
+    env:
+      IS_GITHUB_ACTIONS: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install deps
+        shell: bash
+        run: |
+          dart pub global activate fastforge
+          echo "$LOCALAPPDATA/Pub/Cache/bin" >> $GITHUB_PATH
+
+      - name: Prepare
+        shell: bash
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+          dart run slang
+
+      - name: Download hiddify-core
+        shell: bash
+        run: |
+          mkdir -p hiddify-core/bin
+          curl -L https://github.com/hiddify/hiddify-next-core/releases/download/draft/hiddify-lib-windows-amd64.tar.gz | tar xz -C hiddify-core/bin/
+          ls -la hiddify-core/bin/
+
+      - name: Build Windows exe installer
+        shell: bash
+        run: |
+          export PATH="$PATH:/c/Program Files (x86)/Inno Setup 6"
+          fastforge package \
+            --platform windows \
+            --targets exe \
+            --skip-clean \
+            --build-target=lib/main.dart \
+            --build-dart-define=sentry_dsn=
+
+      - name: Collect installer
+        shell: bash
+        run: |
+          mkdir -p out
+          cp dist/*/*.exe out/Zapretov-Windows-Setup.exe || true
+          ls -la out/
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: out/
+          retention-days: 30
