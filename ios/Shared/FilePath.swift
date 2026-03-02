@@ -16,9 +16,13 @@ public enum FilePath {
 public extension FilePath {
     static let groupName = "group.\(packageName)"
 
-    private static let defaultSharedDirectory: URL! = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: FilePath.groupName)
-
-    static let sharedDirectory = defaultSharedDirectory!
+    static let sharedDirectory: URL = {
+        if let groupDir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: FilePath.groupName) {
+            return groupDir
+        }
+        // Fallback to Documents directory if App Group is not available
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    }()
 
     static let cacheDirectory = sharedDirectory
         .appendingPathComponent("Library", isDirectory: true)

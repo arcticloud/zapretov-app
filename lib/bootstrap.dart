@@ -33,25 +33,42 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   if (!kIsWeb) {
     FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   }
+
+  final container = ProviderContainer(overrides: [environmentProvider.overrideWithValue(env)]);
+
+  try {
+    await _doBootstrap(widgetsBinding, env, container);
+  } catch (e, stackTrace) {
+    // Bootstrap failed — still launch the app so user sees UI instead of eternal splash
+    try {
+      Logger.bootstrap.error("bootstrap failed, launching app anyway", e, stackTrace);
+    } catch (_) {}
+  }
+
+  // ALWAYS run the app and remove splash, no matter what happened above
+  runApp(
+    ProviderScope(
+      parent: container,
+      observers: [RiverpodObserver()],
+      child: SentryUserInteractionWidget(child: const App()),
+    ),
+  );
+
+  if (!kIsWeb) {
+    try {
+      FlutterNativeSplash.remove();
+    } catch (_) {}
+  }
+}
+
+Future<void> _doBootstrap(WidgetsBinding widgetsBinding, Environment env, ProviderContainer container) async {
   LoggerController.preInit();
   FlutterError.onError = Logger.logFlutterError;
   WidgetsBinding.instance.platformDispatcher.onError = Logger.logPlatformDispatcherError;
 
-  // Failsafe: remove splash after 25s no matter what
-  if (!kIsWeb) {
-    Future.delayed(const Duration(seconds: 25), () {
-      try {
-        FlutterNativeSplash.remove();
-      } catch (_) {}
-    });
-  }
-
   final stopWatch = Stopwatch()..start();
 
-  final container = ProviderContainer(overrides: [environmentProvider.overrideWithValue(env)]);
-
-  // Critical: directories must work — but add timeout
-  await _init("directories", () => container.read(appDirectoriesProvider.future), timeout: 5000);
+  await _safeInit("directories", () => container.read(appDirectoriesProvider.future), timeout: 5000);
   try {
     LoggerController.init(container.read(logPathResolverProvider).appFile().path);
   } catch (e) {
@@ -59,8 +76,7 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   }
 
   final appInfo = await _safeInit("app info", () => container.read(appInfoProvider.future), timeout: 5000);
-  // Critical: preferences must work for the app to function
-  await _init("preferences", () => container.read(sharedPreferencesProvider.future), timeout: 5000);
+  await _safeInit("preferences", () => container.read(sharedPreferencesProvider.future), timeout: 5000);
 
   await _safeInit("analytics", () async {
     final enableAnalytics = await container.read(analyticsControllerProvider.future);
@@ -110,12 +126,6 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   await _safeInit("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init(), timeout: 15000);
 
   if (!kIsWeb) {
-    // await _safeInit(
-    //   "deep link service",
-    //   () => container.read(deepLinkNotifierProvider.future),
-    //   timeout: 1000,
-    // );
-
     if (PlatformUtils.isDesktop) {
       await _safeInit("system tray", () => container.read(systemTrayNotifierProvider.future), timeout: 1000);
     }
@@ -129,19 +139,6 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
 
   Logger.bootstrap.info("bootstrap took [${stopWatch.elapsedMilliseconds}ms]");
   stopWatch.stop();
-
-  runApp(
-    ProviderScope(
-      parent: container,
-      observers: [RiverpodObserver()],
-      child: SentryUserInteractionWidget(child: const App()),
-    ),
-  );
-
-  if (!kIsWeb) {
-    FlutterNativeSplash.remove();
-  }
-  // SentryFlutter.s(DateTime.now().toUtc());
 }
 
 Future<T> _init<T>(String name, Future<T> Function() initializer, {int? timeout}) async {
