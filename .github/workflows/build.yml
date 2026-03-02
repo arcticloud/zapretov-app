@@ -133,15 +133,13 @@ jobs:
           # Build Flutter iOS app (archive only, no export yet)
           flutter build ios --no-codesign --dart-define sentry_dsn= --dart-define FLUTTER_BUILD_NAME=4.0.5 --dart-define FLUTTER_BUILD_NUMBER=40005
 
-          # Archive with Xcode using manual distribution signing + API key for provisioning
+          # Archive with Xcode using automatic signing + API key
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
             -archivePath build/ios/archive/Runner.xcarchive \
             -destination 'generic/platform=iOS' \
             archive \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8" \
             -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
