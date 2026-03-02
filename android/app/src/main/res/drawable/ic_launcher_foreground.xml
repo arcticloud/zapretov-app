@@ -13,7 +13,7 @@
         android:fillColor="#1B8F5A"/>
     <!-- White Z -->
     <path
-        android:pathData="M640,576h768v160H880L1408,1248v160H640v-160h528L640,736V576z"
+        android:pathData="M640,576H1408V736L880,1248H1408V1408H640V1248L1168,736H640Z"
         android:fillColor="#FFFFFF"/>
   </group>
 </vector>

@@ -130,7 +130,30 @@ jobs:
       - name: Build IPA
         if: env.HAS_IOS_SIGNING == 'true'
         run: |
-          make ios-release
+          # Build Flutter iOS app (archive only, no export yet)
+          flutter build ios --no-codesign --dart-define sentry_dsn= --dart-define FLUTTER_BUILD_NAME=4.0.5 --dart-define FLUTTER_BUILD_NUMBER=40005
+
+          # Archive with Xcode using automatic signing + API key
+          xcodebuild -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -destination 'generic/platform=iOS' \
+            archive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+
+          # Export IPA
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist ios/exportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
         env:
           CHANNEL: dev
 
@@ -138,7 +161,8 @@ jobs:
         if: env.HAS_IOS_SIGNING == 'true'
         run: |
           mkdir -p out
-          find build -name "*.ipa" -exec cp {} out/Zapretov-iOS.ipa \; || true
+          find build/ios/ipa -name "*.ipa" -exec cp {} out/Zapretov-iOS.ipa \; || true
+          find build/ios/archive -name "*.ipa" -exec cp {} out/Zapretov-iOS.ipa \; || true
           ls -la out/
 
       - name: Upload to TestFlight
