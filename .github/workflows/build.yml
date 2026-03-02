@@ -220,8 +220,8 @@ jobs:
       - name: Build Windows exe installer
         shell: bash
         run: |
-          export PATH="$PATH:/c/Program Files (x86)/Inno Setup 6"
-          dart pub global run fastforge package \
+          export PATH="$PATH:/c/Program Files (x86)/Inno Setup 6:$PUB_CACHE/bin"
+          fastforge package \
             --platform windows \
             --targets exe \
             --skip-clean \
