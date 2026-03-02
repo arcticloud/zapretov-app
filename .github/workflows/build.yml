@@ -12,6 +12,8 @@ env:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    env:
+      HAS_SIGNING: ${{ secrets.ANDROID_SIGNING_KEY != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -52,9 +54,7 @@ jobs:
         run: make android-apk-prepare
 
       - name: Setup signing
-        if: ${{ env.HAS_SIGNING == 'true' }}
-        env:
-          HAS_SIGNING: ${{ secrets.ANDROID_SIGNING_KEY != '' }}
+        if: env.HAS_SIGNING == 'true'
         run: |
           echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 --decode > android/key.jks
           echo "storeFile=$(pwd)/android/key.jks" > android/key.properties
