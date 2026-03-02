@@ -196,9 +196,8 @@ jobs:
           cache: true
 
       - name: Install deps
-        run: |
-          dart pub global activate fastforge
-          echo "$env:LOCALAPPDATA\Pub\Cache\bin" >> $env:GITHUB_PATH
+        shell: bash
+        run: dart pub global activate fastforge
 
       - name: Prepare
         shell: bash
@@ -217,7 +216,7 @@ jobs:
       - name: Build Windows exe installer
         shell: bash
         run: |
-          export PATH="$PATH:/c/Program Files (x86)/Inno Setup 6"
+          export PATH="$PATH:/c/Program Files (x86)/Inno Setup 6:$(cygpath -u "$PUB_CACHE")/bin"
           fastforge package \
             --platform windows \
             --targets exe \
