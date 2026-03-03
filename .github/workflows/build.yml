@@ -1,4 +1,4 @@
-name: Build Zapretov.net
+name: Build Relokant
 
 on:
   push:
@@ -68,10 +68,10 @@ jobs:
       - name: Collect APKs
         run: |
           mkdir -p out
-          cp ./build/app/outputs/flutter-apk/*arm64-v8a*.apk out/Zapretov-Android-arm64.apk || true
-          cp ./build/app/outputs/flutter-apk/*armeabi-v7a*.apk out/Zapretov-Android-arm7.apk || true
-          cp ./build/app/outputs/flutter-apk/*x86_64*.apk out/Zapretov-Android-x64.apk || true
-          cp ./build/app/outputs/flutter-apk/app-release.apk out/Zapretov-Android-universal.apk || true
+          cp ./build/app/outputs/flutter-apk/*arm64-v8a*.apk out/Relokant-Android-arm64.apk || true
+          cp ./build/app/outputs/flutter-apk/*armeabi-v7a*.apk out/Relokant-Android-arm7.apk || true
+          cp ./build/app/outputs/flutter-apk/*x86_64*.apk out/Relokant-Android-x64.apk || true
+          cp ./build/app/outputs/flutter-apk/app-release.apk out/Relokant-Android-universal.apk || true
           ls -la out/
 
       - name: Upload APK
@@ -161,8 +161,8 @@ jobs:
         if: env.HAS_IOS_SIGNING == 'true'
         run: |
           mkdir -p out
-          find build/ios/ipa -name "*.ipa" -exec cp {} out/Zapretov-iOS.ipa \; || true
-          find build/ios/archive -name "*.ipa" -exec cp {} out/Zapretov-iOS.ipa \; || true
+          find build/ios/ipa -name "*.ipa" -exec cp {} out/Relokant-iOS.ipa \; || true
+          find build/ios/archive -name "*.ipa" -exec cp {} out/Relokant-iOS.ipa \; || true
           ls -la out/
 
       - name: Upload to TestFlight
@@ -171,7 +171,7 @@ jobs:
         run: |
           xcrun altool --upload-app \
             --type ios \
-            --file out/Zapretov-iOS.ipa \
+            --file out/Relokant-iOS.ipa \
             --apiKey ${{ secrets.APP_STORE_CONNECT_KEY_ID }} \
             --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
 
@@ -223,7 +223,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p out
-          cp dist/*/*.exe out/Zapretov-Windows-Setup.exe || true
+          cp dist/*/*.exe out/Relokant-Windows-Setup.exe || true
           ls -la out/
 
       - name: Upload Windows installer

@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "Zapretov.net" "\0"
-            VALUE "FileDescription", "Zapretov.net VPN" "\0"
+            VALUE "CompanyName", "Relokant" "\0"
+            VALUE "FileDescription", "Relokant VPN" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "zapretov" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 Zapretov.net. All rights reserved." "\0"
-            VALUE "OriginalFilename", "Zapretov.exe" "\0"
-            VALUE "ProductName", "Zapretov.net" "\0"
+            VALUE "InternalName", "relokant" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 Relokant. All rights reserved." "\0"
+            VALUE "OriginalFilename", "Relokant.exe" "\0"
+            VALUE "ProductName", "Relokant" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

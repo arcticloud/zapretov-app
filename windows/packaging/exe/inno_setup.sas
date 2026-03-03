@@ -63,13 +63,13 @@ Name: "{userstartup}\\{{DISPLAY_NAME}}"; Filename: "{app}\\{{EXECUTABLE_NAME}}";
 Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,{{DISPLAY_NAME}}}"; Flags: {% if PRIVILEGES_REQUIRED == 'admin' %}runascurrentuser{% endif %} nowait postinstall skipifsilent
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{userappdata}\Zapretov"
+Type: filesandordirs; Name: "{userappdata}\Relokant"
 
 [Code]
 function InitializeSetup(): Boolean;
 var
   ResultCode: Integer;
 begin
-  Exec('taskkill', '/F /IM Zapretov.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
+  Exec('taskkill', '/F /IM Relokant.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
   Result := True;
 end;

@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 abstract class Constants {
-  static const appName = "Zapretov.net";
-  static const githubUrl = "https://t.me/zapretov_net_bot";
-  static const licenseUrl = "https://t.me/zapretov_net_bot";
+  static const appName = "Relokant";
+  static const githubUrl = "https://t.me/relokant_net_bot";
+  static const licenseUrl = "https://t.me/relokant_net_bot";
   static const githubReleasesApiUrl = "";
   static const githubLatestReleaseUrl = "";
   static const appCastUrl = "";
-  static const telegramChannelUrl = "https://t.me/zapretov_net_bot";
-  static const privacyPolicyUrl = "https://t.me/zapretov_net_bot";
-  static const termsAndConditionsUrl = "https://t.me/zapretov_net_bot";
+  static const telegramChannelUrl = "https://t.me/relokant_net_bot";
+  static const privacyPolicyUrl = "https://t.me/relokant_net_bot";
+  static const termsAndConditionsUrl = "https://t.me/relokant_net_bot";
   static const cfWarpPrivacyPolicy = "https://www.cloudflare.com/application/privacypolicy/";
   static const cfWarpTermsOfService = "https://www.cloudflare.com/application/terms/";
 }

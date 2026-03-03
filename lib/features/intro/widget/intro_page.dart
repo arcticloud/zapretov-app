@@ -14,7 +14,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 class IntroPage extends HookConsumerWidget with PresLogger {
   const IntroPage({super.key});
 
-  static const _serverBase = 'http://155.212.189.249:8080';
+  static const _serverBase = 'https://api.relokant.net';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,7 +37,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
         final subUrl = '$_serverBase/activate/$code';
         final profileRepo = ref.read(profileRepositoryProvider).requireValue;
         final result = await profileRepo
-            .upsertRemote(subUrl, userOverride: UserOverride(name: 'Zapretov.net'))
+            .upsertRemote(subUrl, userOverride: UserOverride(name: 'Relokant'))
             .run();
 
         result.match(
@@ -161,7 +161,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                     foregroundColor: const Color(0xFF1B8F5A),
                   ),
                   icon: const Icon(Icons.telegram),
-                  label: const Text('Получить в @zapretov_net_bot'),
+                  label: const Text('Получить в @relokant_net_bot'),
                 ),
               ],
             ),

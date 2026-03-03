@@ -17,7 +17,7 @@ class AppInfoEntity with _$AppInfoEntity {
     required Environment environment,
   }) = _AppInfoEntity;
 
-  String get userAgent => "Zapretov/$version ($operatingSystem) like ClashMeta v2ray sing-box";
+  String get userAgent => "Relokant/$version ($operatingSystem) like ClashMeta v2ray sing-box";
 
   String get presentVersion => environment == Environment.prod ? version : "$version ${environment.name}";
 

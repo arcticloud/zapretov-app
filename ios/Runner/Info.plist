@@ -9,7 +9,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Запретов.нет</string>
+	<string>Relokant</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -29,6 +29,7 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>relokant</string>
 				<string>hiddify</string>
 				<string>v2ray</string>
 				<string>v2rayn</string>

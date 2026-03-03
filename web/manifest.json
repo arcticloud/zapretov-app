@@ -1,11 +1,11 @@
 {
-    "name": "Zapretov",
-    "short_name": "Zapretov",
+    "name": "Relokant",
+    "short_name": "Relokant",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Zapretov",
+    "description": "Relokant",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

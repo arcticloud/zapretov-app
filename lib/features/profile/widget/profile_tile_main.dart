@@ -16,10 +16,10 @@ class ProfileTileMain extends HookConsumerWidget {
   final ProfileEntity profile;
   final bool isMain;
   static const verifiedDomains = [
-    'zapretov.net',
+    'relokant.net',
   ];
   static const verifiedLinks = [
-    'https://t.me/zapretov_net_bot',
+    'https://t.me/relokant_net_bot',
   ];
   Future<void> _launchUrlWithCheck(BuildContext context, WidgetRef ref, String url) async {
     final uri = Uri.parse(url);
@@ -174,7 +174,7 @@ class ProfileTileMain extends HookConsumerWidget {
     if (host.endsWith('facebook.com')) {
       return FontAwesomeIcons.facebook;
     }
-    if (host.endsWith('zapretov.net')) {
+    if (host.endsWith('relokant.net')) {
       // return IconData();
     }
     return icon ?? FluentIcons.link_24_regular;
@@ -196,8 +196,8 @@ class ProfileTileMain extends HookConsumerWidget {
     if (host.endsWith('facebook.com')) {
       return uri.pathSegments.lastWhere((e) => e.isNotEmpty, orElse: () => '');
     }
-    if (host.endsWith('zapretov.net')) {
-      return "Zapretov";
+    if (host.endsWith('relokant.net')) {
+      return "Relokant";
     }
     return uri.host;
   }

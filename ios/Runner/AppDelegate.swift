@@ -19,7 +19,7 @@ import Sentry
         do {
             try FileManager.default.createDirectory(at: FilePath.workingDirectory, withIntermediateDirectories: true)
         } catch {
-            NSLog("Zapretov: Failed to create working directory: \(error)")
+            NSLog("Relokant: Failed to create working directory: \(error)")
         }
         FileManager.default.changeCurrentDirectoryPath(FilePath.sharedDirectory.path)
     }
