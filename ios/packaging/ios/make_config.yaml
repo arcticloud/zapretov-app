@@ -1,18 +1,14 @@
-display_name: Hiddify
+display_name: Relokant
 
 icon: ..\..\assets\images\windows.ico
 
 keywords:
-  - Hiddify
-  - Proxy
+  - Relokant
   - VPN
-  - V2ray
-  - Nekoray
+  - Proxy
   - Xray
-  - Psiphon
-  - OpenVPN
 
-generic_name: Hiddify
+generic_name: Relokant
 
 actions:
   - name: Start

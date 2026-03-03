@@ -1,37 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Hiddify AppStream Metadata
-  Place this file at: linux/packaging/myappid.appdata.xml
--->
 <component type="desktop-application">
   <id>app.hiddify.com</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
 
-  <name>Hiddify</name>
-  <summary>Modern Proxy and VPN Manager for Linux</summary>
+  <name>Relokant</name>
+  <summary>VPN for Russian-speaking expats</summary>
 
-  <developer_name>Hiddify</developer_name>
-  <update_contact>linux@hiddify.com</update_contact>
+  <developer_name>Relokant</developer_name>
+  <update_contact>support@relokant.net</update_contact>
 
   <description>
     <p>
-      Hiddify is an advanced proxy and VPN client built for privacy and control. 
-      It supports multiple backend protocols including V2Ray, Xray, Clash, and Sing-box, 
-      providing flexibility and performance for all kinds of network configurations.
+      Relokant is a VPN client that gives you a Russian IP address from anywhere in the world.
+      Access Gosuslugi, Russian banks, and streaming services while abroad.
     </p>
     <p>
-      Designed with simplicity in mind, Hiddify helps users connect securely and 
-      manage complex proxy configurations through a clean graphical interface.
+      Built on Xray with VLESS Reality protocol for reliable and secure connections.
     </p>
   </description>
-
-  <screenshots>
-    <screenshot type="default">
-      <image>https://hiddify.com/assets/hiddify-next-mobile.svg</image>
-      <caption>Main Interface of Hiddify</caption>
-    </screenshot>
-  </screenshots>
 
   <launchable type="desktop-id">hiddify.desktop</launchable>
 
@@ -42,14 +29,11 @@
   </categories>
 
   <keywords>
-    <keyword>Hiddify</keyword>
-    <keyword>Proxy</keyword>
+    <keyword>Relokant</keyword>
     <keyword>VPN</keyword>
-    <keyword>V2Ray</keyword>
-    <keyword>Nekoray</keyword>
+    <keyword>Proxy</keyword>
     <keyword>Xray</keyword>
-    <keyword>Psiphon</keyword>
-    <keyword>OpenVPN</keyword>
+    <keyword>VLESS</keyword>
   </keywords>
 
   <mime-types>
@@ -62,18 +46,16 @@
     <mime-type>x-scheme-handler/sing-box</mime-type>
   </mime-types>
 
-  <url type="homepage">https://hiddify.com</url>
-  <url type="bugtracker">https://github.com/hiddify/hiddify-app/issues</url>
-  <url type="help">https://docs.hiddify.com</url>
+  <url type="homepage">https://relokant.net</url>
 
   <provides>
     <binary>hiddify</binary>
   </provides>
 
   <releases>
-    <release version="1.0.0" date="2025-10-25">
+    <release version="1.0.0" date="2026-03-03">
       <description>
-        <p>Initial Linux release of Hiddify with multi-protocol support and modern UI.</p>
+        <p>Initial release of Relokant VPN.</p>
       </description>
     </release>
   </releases>

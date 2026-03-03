@@ -107,7 +107,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                     LengthLimitingTextInputFormatter(8),
                   ],
                   decoration: InputDecoration(
-                    hintText: 'AB3K9F',
+                    hintText: 'AB3K9F2X',
                     hintStyle: TextStyle(
                       letterSpacing: 8,
                       color: theme.colorScheme.onSurface.withAlpha(77),
