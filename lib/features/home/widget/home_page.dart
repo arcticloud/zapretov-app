@@ -8,6 +8,7 @@ import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
+import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -19,6 +20,36 @@ class HomePage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final trialState = ref.watch(trialProvider);
+    final connectionStatus = ref.watch(connectionNotifierProvider);
+    final isConnected = connectionStatus.valueOrNull is Connected;
+
+    // Start/stop trial timer based on VPN connection state
+    ref.listen(connectionNotifierProvider, (prev, next) {
+      if (!trialState.isTrial) return;
+      final wasConnected = prev?.valueOrNull is Connected;
+      final nowConnected = next.valueOrNull is Connected;
+      if (!wasConnected && nowConnected) {
+        ref.read(trialProvider.notifier).startTimer();
+      } else if (wasConnected && !nowConnected) {
+        ref.read(trialProvider.notifier).stopTimer();
+      }
+    });
+
+    // Auto-disconnect when trial expires
+    ref.listen(trialProvider, (prev, next) {
+      if (next.isTrial && next.isExpired && !(prev?.isExpired ?? false)) {
+        // Disconnect VPN
+        final connStatus = ref.read(connectionNotifierProvider).valueOrNull;
+        if (connStatus is Connected) {
+          ref.read(connectionNotifierProvider.notifier).toggleConnection();
+        }
+        // Show expired dialog
+        if (context.mounted) {
+          _showTrialExpiredDialog(context);
+        }
+      }
+    });
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0a0a0a) : const Color(0xFF00E5A0),
@@ -37,6 +68,10 @@ class HomePage extends HookConsumerWidget {
             Column(
               children: [
                 _Header(isDark: isDark),
+                if (trialState.isTrial) ...[
+                  const SizedBox(height: 4),
+                  _TrialTimerBar(isDark: isDark, trialState: trialState),
+                ],
                 const SizedBox(height: 8),
                 _LocationSelector(isDark: isDark),
                 const Spacer(),
@@ -48,6 +83,14 @@ class HomePage extends HookConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showTrialExpiredDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const _TrialExpiredDialog(),
     );
   }
 }
@@ -248,7 +291,7 @@ class _LocationSelector extends ConsumerWidget {
     final rawTag = (_isMetaProxy(proxy) && proxy.groupSelectedTagDisplay.isNotEmpty)
         ? proxy.groupSelectedTagDisplay
         : proxy.tagDisplay;
-    final tag = rawTag.toLowerCase();
+    final tag = _cleanTag(rawTag).toLowerCase();
 
     const tagToCountry = {
       'russia': 'ru', 'россия': 'ru', 'moscow': 'ru', 'москва': 'ru', 'ru': 'ru',
@@ -282,16 +325,32 @@ class _LocationSelector extends ConsumerWidget {
     return _metaTags.any((m) => tag == m) || proxy.tag.contains('§hide§');
   }
 
+  /// Strip Marzban noise from server tag: emoji prefix, (username), [VLESS - tcp]
+  static String _cleanTag(String raw) {
+    // Remove leading emoji (non-ASCII chars before first letter/digit)
+    var s = raw.replaceAll(RegExp(r'^[^\w\u0400-\u04FF]+'), '');
+    // Remove (anything) — Marzban puts username here
+    s = s.replaceAll(RegExp(r'\s*\([^)]*\)'), '');
+    // Remove [anything] — protocol info like [VLESS - tcp]
+    s = s.replaceAll(RegExp(r'\s*\[[^\]]*\]'), '');
+    s = s.trim();
+    // "Marz" alone is the default Marzban panel name — replace with Россия
+    if (s.isEmpty || s.toLowerCase() == 'marz' || s.toLowerCase() == 'marzban') {
+      return 'Россия';
+    }
+    return s;
+  }
+
   /// Show the server's actual tag name (e.g. "Москва-1", "СПб")
   /// instead of generic country name. For meta-groups (balance, lowest),
   /// shows the resolved server via groupSelectedTagDisplay.
   static String _locationName(OutboundInfo? proxy, String countryCode) {
     if (proxy != null && proxy.tagDisplay.isNotEmpty && !_isMetaProxy(proxy)) {
-      return proxy.tagDisplay;
+      return _cleanTag(proxy.tagDisplay);
     }
     // Meta-group (balance, lowest, etc.) — show the actual resolved server
     if (proxy != null && _isMetaProxy(proxy) && proxy.groupSelectedTagDisplay.isNotEmpty) {
-      return proxy.groupSelectedTagDisplay;
+      return _cleanTag(proxy.groupSelectedTagDisplay);
     }
     const names = {
       'ru': 'Россия',
@@ -599,6 +658,184 @@ class _ProxyPickerSheet extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+// ─── Trial timer bar ──────────────────────────────────────
+
+class _TrialTimerBar extends StatelessWidget {
+  const _TrialTimerBar({required this.isDark, required this.trialState});
+  final bool isDark;
+  final TrialState trialState;
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = trialState.remainingSeconds;
+    final minutes = remaining ~/ 60;
+    final seconds = remaining % 60;
+    final timeStr = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final progress = remaining / (10 * 60);
+    final isLow = remaining < 120; // < 2 min
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.08),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.timer_outlined,
+                  size: 14,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.4)
+                      : Colors.black.withValues(alpha: 0.5),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Пробный доступ',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.4)
+                        : Colors.black.withValues(alpha: 0.5),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  timeStr,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    color: trialState.isExpired
+                        ? const Color(0xFFFF4444)
+                        : isLow
+                            ? const Color(0xFFFF8800)
+                            : isDark
+                                ? const Color(0xFF00E5A0)
+                                : const Color(0xFF0a0a0a),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 4,
+                backgroundColor: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.08),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  trialState.isExpired
+                      ? const Color(0xFFFF4444)
+                      : isLow
+                          ? const Color(0xFFFF8800)
+                          : const Color(0xFF00E5A0),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Trial expired dialog ─────────────────────────────────
+
+class _TrialExpiredDialog extends StatelessWidget {
+  const _TrialExpiredDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFFF4444).withValues(alpha: 0.1),
+              ),
+              child: const Icon(
+                Icons.timer_off_outlined,
+                size: 32,
+                color: Color(0xFFFF4444),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Лимит исчерпан',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Вы использовали 10 минут сегодня.\nВозвращайтесь завтра или оформите подписку.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // TODO: Navigate to subscription page when ready
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Скоро'), duration: Duration(seconds: 1)),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF00E5A0),
+                  foregroundColor: const Color(0xFF0a0a0a),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'Оформить подписку',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Вернуться завтра',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

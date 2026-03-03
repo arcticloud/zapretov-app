@@ -7,6 +7,7 @@ import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/model/profile_failure.dart';
+import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -21,15 +22,10 @@ class IntroPage extends HookConsumerWidget with PresLogger {
     final theme = Theme.of(context);
     final codeController = useTextEditingController();
     final isLoading = useState(false);
+    final isTrialLoading = useState(false);
     final errorText = useState<String?>(null);
 
-    Future<void> activate() async {
-      final code = codeController.text.trim().toUpperCase();
-      if (code.isEmpty) {
-        errorText.value = 'Введите код активации';
-        return;
-      }
-
+    Future<void> activateWithCode(String code) async {
       isLoading.value = true;
       errorText.value = null;
 
@@ -61,6 +57,35 @@ class IntroPage extends HookConsumerWidget with PresLogger {
         loggy.error('Activation error', e);
       }
     }
+
+    Future<void> activate() async {
+      final code = codeController.text.trim().toUpperCase();
+      if (code.isEmpty) {
+        errorText.value = 'Введите код активации';
+        return;
+      }
+      await activateWithCode(code);
+    }
+
+    Future<void> startTrial() async {
+      isTrialLoading.value = true;
+      errorText.value = null;
+
+      final trial = ref.read(trialProvider.notifier);
+      final code = await trial.createTrial();
+
+      if (code == null) {
+        isTrialLoading.value = false;
+        errorText.value = ref.read(trialProvider).error ?? 'Не удалось создать пробный доступ';
+        return;
+      }
+
+      // Activate with the trial code
+      isTrialLoading.value = false;
+      await activateWithCode(code);
+    }
+
+    final anyLoading = isLoading.value || isTrialLoading.value;
 
     return Scaffold(
       body: Center(
@@ -125,7 +150,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                   width: double.infinity,
                   height: 56,
                   child: FilledButton(
-                    onPressed: isLoading.value ? null : activate,
+                    onPressed: anyLoading ? null : activate,
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF1B8F5A),
                       foregroundColor: Colors.white,
@@ -145,7 +170,57 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                           ),
                   ),
                 ),
-                const Gap(32),
+                const Gap(16),
+                Row(
+                  children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'или',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const Expanded(child: Divider()),
+                  ],
+                ),
+                const Gap(16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: OutlinedButton(
+                    onPressed: anyLoading ? null : startTrial,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF1B8F5A),
+                      side: const BorderSide(color: Color(0xFF1B8F5A), width: 1.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: isTrialLoading.value
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Попробовать бесплатно',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                '10 минут в день — без регистрации',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w400),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                const Gap(24),
                 Text(
                   'Нет кода?',
                   style: theme.textTheme.bodyMedium?.copyWith(
