@@ -8,15 +8,32 @@ class AppTheme {
   final AppThemeMode mode;
   final String fontFamily;
 
-  static const _brandGreen = Color(0xFF00E5A0);
-  static const _brandDark = Color(0xFF0a0a0a);
+  static const brandGreen = Color(0xFF00E5A0);
+  static const brandDark = Color(0xFF0a0a0a);
+
+  /// Dark theme used for settings/about pages regardless of user's theme choice.
+  static final settingsDark = ThemeData(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: brandGreen,
+      brightness: Brightness.dark,
+    ).copyWith(primary: brandGreen, onPrimary: brandDark),
+    scaffoldBackgroundColor: brandDark,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Colors.transparent,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+    ),
+  );
 
   ThemeData lightTheme(ColorScheme? lightColorScheme) {
-    final ColorScheme scheme = lightColorScheme ?? ColorScheme.fromSeed(seedColor: _brandGreen);
+    final ColorScheme base = lightColorScheme ?? ColorScheme.fromSeed(seedColor: brandGreen);
+    final scheme = base.copyWith(primary: brandGreen, onPrimary: brandDark);
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: _brandGreen,
+      scaffoldBackgroundColor: brandGreen,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -28,12 +45,13 @@ class AppTheme {
   }
 
   ThemeData darkTheme(ColorScheme? darkColorScheme) {
-    final ColorScheme scheme =
-        darkColorScheme ?? ColorScheme.fromSeed(seedColor: _brandGreen, brightness: Brightness.dark);
+    final ColorScheme base =
+        darkColorScheme ?? ColorScheme.fromSeed(seedColor: brandGreen, brightness: Brightness.dark);
+    final scheme = base.copyWith(primary: brandGreen, onPrimary: brandDark);
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: mode.trueBlack ? Colors.black : _brandDark,
+      scaffoldBackgroundColor: mode.trueBlack ? Colors.black : brandDark,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,

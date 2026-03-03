@@ -89,12 +89,37 @@ class AboutPage extends HookConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Assets.images.logo.svg(width: 64, height: 64),
+                  Container(
+                    width: 52,
+                    height: 52,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00E5A0),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Assets.images.logo.svg(
+                      colorFilter: const ColorFilter.mode(Color(0xFF0a0a0a), BlendMode.srcIn),
+                    ),
+                  ),
                   const Gap(16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(t.common.appTitle, style: Theme.of(context).textTheme.titleLarge),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(t.common.appTitle, style: Theme.of(context).textTheme.titleLarge),
+                          const Gap(6),
+                          Text(
+                            'VPN',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: const Color(0xFF00E5A0),
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
                       const Gap(4),
                       Text("${t.common.version} ${appInfo.presentVersion}"),
                     ],

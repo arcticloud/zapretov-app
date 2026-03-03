@@ -6,9 +6,11 @@ import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/custom_transition.dart';
 import 'package:hiddify/core/router/go_router/refresh_listenable.dart';
+import 'package:hiddify/core/theme/app_theme.dart';
 import 'package:hiddify/features/about/widget/about_page.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
+import 'package:hiddify/features/splash/splash_page.dart';
 import 'package:hiddify/features/log/overview/logs_page.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_page.dart';
 import 'package:hiddify/features/profile/details/profile_details_page.dart';
@@ -38,7 +40,9 @@ final branchesScope = <String, FocusScopeNode>{
 
 // when the routing config is not yet initialized, this config is used
 final loadingConfig = RoutingConfig(
-  routes: <RouteBase>[GoRoute(path: '/home', builder: (context, state) => const Material())],
+  routes: <RouteBase>[
+    GoRoute(path: '/splash', builder: (context, state) => const SplashPage()),
+  ],
 );
 
 String getNameOfBranch(bool isMobileBreakpoint, bool showProfilesAction, int index) =>
@@ -61,6 +65,9 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
     if (isMobileBreakpoint == null) return loadingConfig;
     return RoutingConfig(
       redirect: (context, state) {
+        // Let splash screen play without redirecting
+        if (state.matchedLocation == '/splash') return null;
+
         final introCompleted = ref.read(Preferences.introCompleted);
         final isIntro = state.matchedLocation == '/intro';
         // fix path-parameters for deep link
@@ -125,76 +132,84 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                 ),
               ],
             ),
-            // profiles branch removed for simplified UI
+            // Settings branch — always uses dark theme
             StatefulShellBranch(
-              routes: <GoRoute>[
-                GoRoute(
-                  name: 'settings',
-                  path: '/settings',
-                  builder: (context, _) => FocusScope(
-                    node: branchesScope['settings'],
-                    child: PopScope(
-                      canPop: false,
-                      onPopInvokedWithResult: (_, _) => context.goNamed('home'),
-                      child: SettingsPage(),
-                    ),
+              routes: <RouteBase>[
+                ShellRoute(
+                  builder: (context, state, child) => Theme(
+                    data: AppTheme.settingsDark,
+                    child: child,
                   ),
-                  routes: <GoRoute>[
+                  routes: <RouteBase>[
                     GoRoute(
-                      name: 'general',
-                      path: '/general',
-                      pageBuilder: (_, state) =>
-                          customTransition(TransitionType.slide, state.pageKey, const GeneralPage()),
-                    ),
-                    GoRoute(
-                      name: 'routeOptions',
-                      path: '/route-options',
-                      pageBuilder: (_, state) =>
-                          customTransition(TransitionType.slide, state.pageKey, const RouteOptionsPage()),
+                      name: 'settings',
+                      path: '/settings',
+                      builder: (context, _) => FocusScope(
+                        node: branchesScope['settings'],
+                        child: PopScope(
+                          canPop: false,
+                          onPopInvokedWithResult: (_, _) => context.goNamed('home'),
+                          child: SettingsPage(),
+                        ),
+                      ),
                       routes: <GoRoute>[
                         GoRoute(
-                          name: 'perAppProxy',
-                          path: '/per-app-proxy',
+                          name: 'general',
+                          path: '/general',
                           pageBuilder: (_, state) =>
-                              customTransition(TransitionType.slide, state.pageKey, const PerAppProxyPage()),
+                              customTransition(TransitionType.slide, state.pageKey, const GeneralPage()),
+                        ),
+                        GoRoute(
+                          name: 'routeOptions',
+                          path: '/route-options',
+                          pageBuilder: (_, state) =>
+                              customTransition(TransitionType.slide, state.pageKey, const RouteOptionsPage()),
+                          routes: <GoRoute>[
+                            GoRoute(
+                              name: 'perAppProxy',
+                              path: '/per-app-proxy',
+                              pageBuilder: (_, state) =>
+                                  customTransition(TransitionType.slide, state.pageKey, const PerAppProxyPage()),
+                            ),
+                          ],
+                        ),
+                        GoRoute(
+                          name: 'dnsOptions',
+                          path: '/dns-options',
+                          pageBuilder: (_, state) =>
+                              customTransition(TransitionType.slide, state.pageKey, const DnsOptionsPage()),
+                        ),
+                        GoRoute(
+                          name: 'inboundOptions',
+                          path: '/inbound-options',
+                          pageBuilder: (_, state) =>
+                              customTransition(TransitionType.slide, state.pageKey, const InboundOptionsPage()),
+                        ),
+                        GoRoute(
+                          name: 'tlsTricks',
+                          path: '/tls-tricks',
+                          pageBuilder: (_, state) =>
+                              customTransition(TransitionType.slide, state.pageKey, const TlsTricksPage()),
+                        ),
+                        GoRoute(
+                          name: 'warpOptions',
+                          path: '/warp-options',
+                          pageBuilder: (_, state) =>
+                              customTransition(TransitionType.slide, state.pageKey, const WarpOptionsPage()),
+                        ),
+                        GoRoute(
+                          name: 'logs',
+                          path: '/logs',
+                          pageBuilder: (_, state) =>
+                              customTransition(TransitionType.slide, state.pageKey, const LogsPage()),
+                        ),
+                        GoRoute(
+                          name: 'about',
+                          path: '/about',
+                          pageBuilder: (_, state) =>
+                              customTransition(TransitionType.slide, state.pageKey, const AboutPage()),
                         ),
                       ],
-                    ),
-                    GoRoute(
-                      name: 'dnsOptions',
-                      path: '/dns-options',
-                      pageBuilder: (_, state) =>
-                          customTransition(TransitionType.slide, state.pageKey, const DnsOptionsPage()),
-                    ),
-                    GoRoute(
-                      name: 'inboundOptions',
-                      path: '/inbound-options',
-                      pageBuilder: (_, state) =>
-                          customTransition(TransitionType.slide, state.pageKey, const InboundOptionsPage()),
-                    ),
-                    GoRoute(
-                      name: 'tlsTricks',
-                      path: '/tls-tricks',
-                      pageBuilder: (_, state) =>
-                          customTransition(TransitionType.slide, state.pageKey, const TlsTricksPage()),
-                    ),
-                    GoRoute(
-                      name: 'warpOptions',
-                      path: '/warp-options',
-                      pageBuilder: (_, state) =>
-                          customTransition(TransitionType.slide, state.pageKey, const WarpOptionsPage()),
-                    ),
-                    GoRoute(
-                      name: 'logs',
-                      path: '/logs',
-                      pageBuilder: (_, state) =>
-                          customTransition(TransitionType.slide, state.pageKey, const LogsPage()),
-                    ),
-                    GoRoute(
-                      name: 'about',
-                      path: '/about',
-                      pageBuilder: (_, state) =>
-                          customTransition(TransitionType.slide, state.pageKey, const AboutPage()),
                     ),
                   ],
                 ),
@@ -204,6 +219,7 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
           ],
         ),
         GoRoute(name: 'intro', path: '/intro', builder: (_, _) => const IntroPage()),
+        GoRoute(name: 'splash', path: '/splash', builder: (_, _) => const SplashPage()),
       ],
     );
   }

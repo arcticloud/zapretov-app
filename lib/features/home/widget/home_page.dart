@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/theme/app_theme_mode.dart';
 import 'package:hiddify/core/theme/theme_preferences.dart';
+import 'package:hiddify/features/connection/model/connection_status.dart';
+import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
@@ -63,12 +65,17 @@ class _Header extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Assets.images.logo.svg(
+          SizedBox(
             height: 22,
-            colorFilter: ColorFilter.mode(
-              isDark ? const Color(0xFF00E5A0) : const Color(0xFF0a0a0a),
-              BlendMode.srcIn,
+            width: 22,
+            child: Assets.images.logo.svg(
+              fit: BoxFit.contain,
+              colorFilter: ColorFilter.mode(
+                isDark ? const Color(0xFF00E5A0) : const Color(0xFF0a0a0a),
+                BlendMode.srcIn,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -77,19 +84,23 @@ class _Header extends ConsumerWidget {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white : const Color(0xFF0a0a0a),
+              height: 22 / 20,
+              leadingDistribution: TextLeadingDistribution.even,
+              color: Colors.white,
             ),
           ),
-          const SizedBox(width: 3),
+          const SizedBox(width: 5),
           Text(
             'VPN',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
-              letterSpacing: 5,
+              height: 22 / 14,
+              leadingDistribution: TextLeadingDistribution.even,
+              letterSpacing: 1.5,
               color: isDark
                   ? const Color(0xFF00E5A0)
-                  : const Color(0xFF0a0a0a).withValues(alpha: 0.5),
+                  : const Color(0xFF0a0a0a),
             ),
           ),
           const Spacer(),
@@ -137,14 +148,21 @@ class _LocationSelector extends ConsumerWidget {
     final activeProxy = ref.watch(
       activeProxyNotifierProvider.select((value) => value.valueOrNull),
     );
-    final proxiesOverview = ref.watch(proxiesOverviewNotifierProvider);
-    final serverCount = proxiesOverview.valueOrNull?.items.length ?? 0;
-
+    final connectionStatus = ref.watch(connectionNotifierProvider);
+    final isConnected = connectionStatus.valueOrNull is Connected;
     final countryCode = _detectCountryCode(activeProxy);
     final locationName = _locationName(activeProxy, countryCode);
+    final subtitle = isConnected ? 'Нажмите для выбора' : 'Нажмите для подключения';
 
     return GestureDetector(
-      onTap: () => _showProxyPicker(context),
+      onTap: () {
+        if (isConnected) {
+          _showProxyPicker(context);
+        } else {
+          // Trigger VPN connection (same as connection button)
+          ref.read(connectionNotifierProvider.notifier).toggleConnection();
+        }
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -185,7 +203,7 @@ class _LocationSelector extends ConsumerWidget {
                   ),
                   const SizedBox(height: 1),
                   Text(
-                    '$serverCount сервер${_pluralServers(serverCount)} доступно',
+                    subtitle,
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark
@@ -210,12 +228,6 @@ class _LocationSelector extends ConsumerWidget {
     );
   }
 
-  static String _pluralServers(int count) {
-    if (count == 1) return '';
-    if (count >= 2 && count <= 4) return 'а';
-    return 'ов';
-  }
-
   void _showProxyPicker(BuildContext context) {
     final theme = Theme.of(context);
     showModalBottomSheet<void>(
@@ -232,10 +244,15 @@ class _LocationSelector extends ConsumerWidget {
   static String _detectCountryCode(OutboundInfo? proxy) {
     if (proxy == null) return 'ru';
 
-    final tag = proxy.tagDisplay.toLowerCase();
+    // For meta-groups, use the resolved server's display tag
+    final rawTag = (_isMetaProxy(proxy) && proxy.groupSelectedTagDisplay.isNotEmpty)
+        ? proxy.groupSelectedTagDisplay
+        : proxy.tagDisplay;
+    final tag = rawTag.toLowerCase();
 
     const tagToCountry = {
       'russia': 'ru', 'россия': 'ru', 'moscow': 'ru', 'москва': 'ru', 'ru': 'ru',
+      'спб': 'ru', 'петербург': 'ru', 'санкт': 'ru',
       'usa': 'us', 'сша': 'us', 'united states': 'us', 'america': 'us',
       'germany': 'de', 'германия': 'de', 'berlin': 'de', 'frankfurt': 'de',
       'netherlands': 'nl', 'нидерланды': 'nl', 'amsterdam': 'nl',
@@ -258,7 +275,24 @@ class _LocationSelector extends ConsumerWidget {
     return 'ru';
   }
 
+  static const _metaTags = {'lowest', 'balance', 'select'};
+
+  static bool _isMetaProxy(OutboundInfo proxy) {
+    final tag = proxy.tag.toLowerCase();
+    return _metaTags.any((m) => tag == m) || proxy.tag.contains('§hide§');
+  }
+
+  /// Show the server's actual tag name (e.g. "Москва-1", "СПб")
+  /// instead of generic country name. For meta-groups (balance, lowest),
+  /// shows the resolved server via groupSelectedTagDisplay.
   static String _locationName(OutboundInfo? proxy, String countryCode) {
+    if (proxy != null && proxy.tagDisplay.isNotEmpty && !_isMetaProxy(proxy)) {
+      return proxy.tagDisplay;
+    }
+    // Meta-group (balance, lowest, etc.) — show the actual resolved server
+    if (proxy != null && _isMetaProxy(proxy) && proxy.groupSelectedTagDisplay.isNotEmpty) {
+      return proxy.groupSelectedTagDisplay;
+    }
     const names = {
       'ru': 'Россия',
       'us': 'США',
@@ -309,7 +343,9 @@ class _Footer extends StatelessWidget {
             label: 'Подписка',
             isDark: isDark,
             onTap: () {
-              // TODO: navigate to subscription page
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Скоро'), duration: Duration(seconds: 1)),
+              );
             },
           ),
           const SizedBox(width: 10),
@@ -318,7 +354,9 @@ class _Footer extends StatelessWidget {
             label: 'Статистика',
             isDark: isDark,
             onTap: () {
-              // TODO: navigate to stats page
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Скоро'), duration: Duration(seconds: 1)),
+              );
             },
           ),
         ],
@@ -491,11 +529,18 @@ class _ProxyPickerSheet extends ConsumerWidget {
                   if (group == null || group.items.isEmpty) {
                     return const Center(child: Text('Нет доступных серверов'));
                   }
+                  // Filter out internal meta-groups (lowest, balance, select, §hide§)
+                  final realServers = group.items
+                      .where((p) => !_LocationSelector._isMetaProxy(p))
+                      .toList();
+                  if (realServers.isEmpty) {
+                    return const Center(child: Text('Нет доступных серверов'));
+                  }
                   return ListView.builder(
                     controller: scrollController,
-                    itemCount: group.items.length,
+                    itemCount: realServers.length,
                     itemBuilder: (context, index) {
-                      final proxy = group.items[index];
+                      final proxy = realServers[index];
                       final selected = group.selected == proxy.tag;
                       final countryCode = _LocationSelector._detectCountryCode(proxy);
                       final locationName = _LocationSelector._locationName(proxy, countryCode);
@@ -508,9 +553,17 @@ class _ProxyPickerSheet extends ConsumerWidget {
                             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                           ),
                         ),
-                        subtitle: proxy.urlTestDelay > 0 && proxy.urlTestDelay < 65000
-                            ? Text('${proxy.urlTestDelay} ms')
-                            : null,
+                        subtitle: Text(
+                          proxy.urlTestDelay > 0 && proxy.urlTestDelay < 65000
+                              ? '${proxy.urlTestDelay} ms'
+                              : 'Проверка...',
+                          style: TextStyle(
+                            color: proxy.urlTestDelay > 0 && proxy.urlTestDelay < 65000
+                                ? null
+                                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                            fontSize: 12,
+                          ),
+                        ),
                         trailing: selected
                             ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
                             : null,
