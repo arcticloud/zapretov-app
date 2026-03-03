@@ -8,11 +8,20 @@ class AppTheme {
   final AppThemeMode mode;
   final String fontFamily;
 
+  static const _brandGreen = Color(0xFF00E5A0);
+  static const _brandDark = Color(0xFF0a0a0a);
+
   ThemeData lightTheme(ColorScheme? lightColorScheme) {
-    final ColorScheme scheme = lightColorScheme ?? ColorScheme.fromSeed(seedColor: const Color(0xFF1B8F5A));
+    final ColorScheme scheme = lightColorScheme ?? ColorScheme.fromSeed(seedColor: _brandGreen);
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      scaffoldBackgroundColor: _brandGreen,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
       fontFamily: fontFamily,
       extensions: const <ThemeExtension<dynamic>>{ConnectionButtonTheme.light},
     );
@@ -20,11 +29,16 @@ class AppTheme {
 
   ThemeData darkTheme(ColorScheme? darkColorScheme) {
     final ColorScheme scheme =
-        darkColorScheme ?? ColorScheme.fromSeed(seedColor: const Color(0xFF1B8F5A), brightness: Brightness.dark);
+        darkColorScheme ?? ColorScheme.fromSeed(seedColor: _brandGreen, brightness: Brightness.dark);
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: mode.trueBlack ? Colors.black : scheme.background,
+      scaffoldBackgroundColor: mode.trueBlack ? Colors.black : _brandDark,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
       fontFamily: fontFamily,
       extensions: const <ThemeExtension<dynamic>>{ConnectionButtonTheme.light},
     );

@@ -1,9 +1,9 @@
 import 'package:circle_flags/circle_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/core/theme/app_theme_mode.dart';
+import 'package:hiddify/core/theme/theme_preferences.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
-import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
@@ -16,97 +16,193 @@ class HomePage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final t = ref.watch(translationsProvider).requireValue;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Row(
+      backgroundColor: isDark ? const Color(0xFF0a0a0a) : const Color(0xFF00E5A0),
+      body: SafeArea(
+        child: Stack(
           children: [
-            Assets.images.logo.svg(height: 22),
-            const SizedBox(width: 8),
-            Text(
-              t.common.appTitle,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            // Decorative elements
+            if (isDark)
+              _AmbientGlow()
+            else ...[
+              _DecoCircle(size: 320, topFraction: 0.20, opacity: 1.0),
+              _DecoCircle(size: 440, topFraction: 0.14, opacity: 0.4),
+            ],
+
+            // Main content
+            Column(
+              children: [
+                _Header(isDark: isDark),
+                const SizedBox(height: 8),
+                _LocationSelector(isDark: isDark),
+                const Spacer(),
+                const ConnectionButton(),
+                const Spacer(),
+                _Footer(isDark: isDark),
+              ],
             ),
           ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, size: 22),
-            onPressed: () => context.goNamed('settings'),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: const AssetImage('assets/images/world_map.png'),
-            fit: BoxFit.cover,
-            opacity: 0.09,
-            colorFilter: theme.brightness == Brightness.dark
-                ? ColorFilter.mode(Colors.white.withValues(alpha: .15), BlendMode.srcIn)
-                : ColorFilter.mode(Colors.grey.withValues(alpha: 1), BlendMode.srcATop),
-          ),
-        ),
-        child: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _LocationSelector(),
-              SizedBox(height: 32),
-              ConnectionButton(),
-              SizedBox(height: 12),
-              ActiveProxyDelayIndicator(),
-            ],
-          ),
         ),
       ),
     );
   }
 }
 
-class _LocationSelector extends ConsumerWidget {
-  const _LocationSelector();
+// ─── Header ───────────────────────────────────────────────
+
+class _Header extends ConsumerWidget {
+  const _Header({required this.isDark});
+  final bool isDark;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+    final themeMode = ref.watch(themePreferencesProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Row(
+        children: [
+          Assets.images.logo.svg(
+            height: 22,
+            colorFilter: ColorFilter.mode(
+              isDark ? const Color(0xFF00E5A0) : const Color(0xFF0a0a0a),
+              BlendMode.srcIn,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Relokant',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : const Color(0xFF0a0a0a),
+            ),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            'VPN',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 5,
+              color: isDark
+                  ? const Color(0xFF00E5A0)
+                  : const Color(0xFF0a0a0a).withValues(alpha: 0.5),
+            ),
+          ),
+          const Spacer(),
+          GestureDetector(
+            onTap: () {
+              // Toggle between light and dark
+              final current = themeMode;
+              final next = (current == AppThemeMode.dark || current == AppThemeMode.black)
+                  ? AppThemeMode.light
+                  : AppThemeMode.dark;
+              ref.read(themePreferencesProvider.notifier).changeThemeMode(next);
+            },
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.06),
+              ),
+              child: Icon(
+                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                size: 20,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.35)
+                    : Colors.black.withValues(alpha: 0.4),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Location selector ────────────────────────────────────
+
+class _LocationSelector extends ConsumerWidget {
+  const _LocationSelector({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final activeProxy = ref.watch(
       activeProxyNotifierProvider.select((value) => value.valueOrNull),
     );
+    final proxiesOverview = ref.watch(proxiesOverviewNotifierProvider);
+    final serverCount = proxiesOverview.valueOrNull?.items.length ?? 0;
 
     final countryCode = _detectCountryCode(activeProxy);
     final locationName = _locationName(activeProxy, countryCode);
 
     return GestureDetector(
-      onTap: () => _showProxyPicker(context, ref),
+      onTap: () => _showProxyPicker(context),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-          ),
+          borderRadius: BorderRadius.circular(16),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.06),
+          border: isDark
+              ? Border.all(color: Colors.white.withValues(alpha: 0.06))
+              : null,
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            CircleFlag(countryCode.toLowerCase(), size: 24),
-            const SizedBox(width: 10),
-            Text(
-              locationName,
-              style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+            // Flag
+            Container(
+              width: 28,
+              height: 18,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: CircleFlag(countryCode.toLowerCase(), size: 28),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 12),
+            // Server info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    locationName,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : const Color(0xFF0a0a0a),
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    '$serverCount сервер${_pluralServers(serverCount)} доступно',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.3)
+                          : Colors.black.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Chevron
             Icon(
-              Icons.expand_more_rounded,
+              Icons.chevron_right_rounded,
               size: 20,
-              color: theme.colorScheme.onSurfaceVariant,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.2),
             ),
           ],
         ),
@@ -114,7 +210,13 @@ class _LocationSelector extends ConsumerWidget {
     );
   }
 
-  void _showProxyPicker(BuildContext context, WidgetRef ref) {
+  static String _pluralServers(int count) {
+    if (count == 1) return '';
+    if (count >= 2 && count <= 4) return 'а';
+    return 'ов';
+  }
+
+  void _showProxyPicker(BuildContext context) {
     final theme = Theme.of(context);
     showModalBottomSheet<void>(
       context: context,
@@ -132,7 +234,6 @@ class _LocationSelector extends ConsumerWidget {
 
     final tag = proxy.tagDisplay.toLowerCase();
 
-    // Check for country keywords in tag name
     const tagToCountry = {
       'russia': 'ru', 'россия': 'ru', 'moscow': 'ru', 'москва': 'ru', 'ru': 'ru',
       'usa': 'us', 'сша': 'us', 'united states': 'us', 'america': 'us',
@@ -151,11 +252,9 @@ class _LocationSelector extends ConsumerWidget {
       if (tag.contains(entry.key)) return entry.value;
     }
 
-    // Fall back to ipinfo country code if available
     final ipCountry = proxy.ipinfo.countryCode;
     if (ipCountry.isNotEmpty) return ipCountry.toLowerCase();
 
-    // Default to Russia (our primary server location)
     return 'ru';
   }
 
@@ -176,6 +275,179 @@ class _LocationSelector extends ConsumerWidget {
     return names[countryCode] ?? countryCode.toUpperCase();
   }
 }
+
+// ─── Footer ───────────────────────────────────────────────
+
+class _Footer extends StatelessWidget {
+  const _Footer({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.02)
+            : const Color(0xFF0a0a0a),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: isDark
+            ? Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.06)))
+            : null,
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+      child: Row(
+        children: [
+          _FooterItem(
+            icon: Icons.settings_outlined,
+            label: 'Настройки',
+            isDark: isDark,
+            onTap: () => context.goNamed('settings'),
+          ),
+          const SizedBox(width: 10),
+          _FooterItem(
+            icon: Icons.credit_card_outlined,
+            label: 'Подписка',
+            isDark: isDark,
+            onTap: () {
+              // TODO: navigate to subscription page
+            },
+          ),
+          const SizedBox(width: 10),
+          _FooterItem(
+            icon: Icons.bar_chart_rounded,
+            label: 'Статистика',
+            isDark: isDark,
+            onTap: () {
+              // TODO: navigate to stats page
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FooterItem extends StatelessWidget {
+  const _FooterItem({
+    required this.icon,
+    required this.label,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.03)
+                : Colors.white.withValues(alpha: 0.05),
+            border: isDark
+                ? Border.all(color: Colors.white.withValues(alpha: 0.05))
+                : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 24,
+                color: Colors.white.withValues(alpha: isDark ? 0.45 : 0.55),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withValues(alpha: isDark ? 0.35 : 0.4),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Decorative elements ──────────────────────────────────
+
+class _AmbientGlow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Center(
+        child: Transform.translate(
+          offset: const Offset(0, -40),
+          child: Container(
+            width: 340,
+            height: 340,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  Color.fromRGBO(0, 229, 160, 0.08),
+                  Colors.transparent,
+                ],
+                stops: [0.0, 0.65],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DecoCircle extends StatelessWidget {
+  const _DecoCircle({
+    required this.size,
+    required this.topFraction,
+    required this.opacity,
+  });
+
+  final double size;
+  final double topFraction;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    return Positioned(
+      top: screenHeight * topFraction,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Opacity(
+          opacity: opacity,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Proxy picker (unchanged) ─────────────────────────────
 
 class _ProxyPickerSheet extends ConsumerWidget {
   const _ProxyPickerSheet();

@@ -1,25 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:gap/gap.dart';
 import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/model/failures.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
-import 'package:hiddify/core/router/dialog/widgets/custom_alert_dialog.dart';
-import 'package:hiddify/core/theme/theme_extensions.dart';
-import 'package:hiddify/core/widget/animated_text.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
-import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
-import 'package:hiddify/gen/assets.gen.dart';
-import 'package:hiddify/singbox/model/singbox_config_enum.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-// TODO: rewrite
 class ConnectionButton extends HookConsumerWidget {
   const ConnectionButton({super.key});
 
@@ -29,265 +18,280 @@ class ConnectionButton extends HookConsumerWidget {
     final connectionStatus = ref.watch(connectionNotifierProvider);
     final activeProxy = ref.watch(activeProxyNotifierProvider);
     final delay = activeProxy.valueOrNull?.urlTestDelay ?? 0;
-
     final requiresReconnect = ref.watch(configOptionNotifierProvider).valueOrNull;
-    final today = DateTime.now();
-    // final animationController = useAnimationController(
-    //   duration: const Duration(seconds: 1),
-    // )..repeat(reverse: true); // Ensure the animation loops indefinitely
 
-    //   // Listen to the animation's value
-    //   final animationValue = useAnimation(Tween<double>(begin: 0.8, end: 1).animate(animationController));
+    final isConnected = connectionStatus.valueOrNull is Connected;
+    final isConnecting = connectionStatus.valueOrNull is Connecting;
+    final isDisconnecting = connectionStatus.valueOrNull is Disconnecting;
+    final isSwitching = isConnecting || isDisconnecting;
 
-    //   // useEffect(() {
-    //   //   if (true) {
-    //   // Start repeating animation
-    //   //   } else {
-    //   //     animationController.stop(); // Stop animation if connected, disconnected, or error
-    //   //   }
-
-    //   //   // Cleanup when widget is disposed
-    //   //   return animationController.dispose;
-    //   // }, [connectionStatus.value]);
-
-    //   // ref.listen(
-    //   //   connectionNotifierProvider,
-    //   //   (_, next) {
-    //   //     if (next case AsyncError(:final error)) {
-    //   //       CustomAlertDialog.fromErr(t.presentError(error)).show(context);
-    //   //     }
-    //   //     if (next case AsyncData(value: Disconnected(:final connectionFailure?))) {
-    //   //       CustomAlertDialog.fromErr(t.presentError(connectionFailure)).show(context);
-    //   //     }
-    //   //   },
-    //   // );
-
-    const buttonTheme = ConnectionButtonTheme.light;
-
-    //   // return CircleDesignWidget(
-    //   //   onTap: switch (connectionStatus) {
-    //   //     // AsyncData(value: Disconnected()) || AsyncError() => () async {
-    //   //     //     if (await showExperimentalNotice()) {
-    //   //     //       return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-    //   //     //     }
-    //   //     //   },
-    //   //     // AsyncData(value: Connected()) => () async {
-    //   //     //     if (requiresReconnect == true && await showExperimentalNotice()) {
-    //   //     //       return await ref.read(connectionNotifierProvider.notifier).reconnect(await ref.read(activeProfileProvider.future));
-    //   //     //     }
-    //   //     //     return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-    //   //     //   },
-    //   //     _ => () {},
-    //   //   },
-    //   //   // enabled: switch (connectionStatus) {
-    //   //   //   AsyncData(value: Connected()) || AsyncData(value: Disconnected()) || AsyncError() => true,
-    //   //   //   _ => false,
-    //   //   // },
-    //   //   // label: switch (connectionStatus) {
-    //   //   //   AsyncData(value: Connected()) when requiresReconnect == true => t.connection.reconnect,
-    //   //   //   AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => t.connection.connecting,
-    //   //   //   AsyncData(value: final status) => status.present(t),
-    //   //   //   _ => "",
-    //   //   // },
-    //   //   color: switch (connectionStatus) {
-    //   //     AsyncData(value: Connected()) when requiresReconnect == true => Colors.teal,
-    //   //     AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => Color.fromARGB(255, 157, 139, 1),
-    //   //     AsyncData(value: Connected()) => Colors.green.shade900,
-    //   //     AsyncData(value: _) => Colors.indigo.shade700, // Color(0xFF3446A5), //buttonTheme.idleColor!,
-    //   //     _ => Colors.red,
-    //   //   },
-
-    //   //   animated: true ||
-    //   //       switch (connectionStatus) {
-    //   //         AsyncData(value: Connected()) when requiresReconnect == true => false,
-    //   //         AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => false,
-    //   //         AsyncData(value: Connected()) => true,
-    //   //         AsyncData(value: _) => true,
-    //   //         _ => false,
-    //   //       },
-    //   //   animationValue: animationValue,
-    //   // );
-    // }
-    var secureLabel =
-        (ref.watch(ConfigOptions.enableWarp) && ref.watch(ConfigOptions.warpDetourMode) == WarpDetourMode.warpOverProxy)
-        ? t.connection.secure
-        : "";
-    if (delay <= 0 || delay > 65000 || connectionStatus.value != const Connected()) {
-      secureLabel = "";
-    }
-    return _ConnectionButton(
-      onTap: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => () async {
-          final activeProfile = await ref.read(activeProfileProvider.future);
-          return await ref.read(connectionNotifierProvider.notifier).reconnect(activeProfile);
-        },
-        AsyncData(value: Disconnected()) || AsyncError() => () async {
-          if (ref.read(activeProfileProvider).valueOrNull == null) {
-            await ref.read(dialogNotifierProvider.notifier).showNoActiveProfile();
-            ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile();
-          }
-          if (await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
-            return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-          }
-        },
-        AsyncData(value: Connected()) => () async {
-          if (requiresReconnect == true &&
-              await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
-            return await ref
-                .read(connectionNotifierProvider.notifier)
-                .reconnect(await ref.read(activeProfileProvider.future));
-          }
+    final onTap = switch (connectionStatus) {
+      AsyncData(value: Connected()) when requiresReconnect == true => () async {
+        final activeProfile = await ref.read(activeProfileProvider.future);
+        return await ref.read(connectionNotifierProvider.notifier).reconnect(activeProfile);
+      },
+      AsyncData(value: Disconnected()) || AsyncError() => () async {
+        if (ref.read(activeProfileProvider).valueOrNull == null) {
+          await ref.read(dialogNotifierProvider.notifier).showNoActiveProfile();
+          ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile();
+        }
+        if (await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
           return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-        },
-        _ => () {},
+        }
       },
-      enabled: switch (connectionStatus) {
-        AsyncData(value: Connected()) || AsyncData(value: Disconnected()) || AsyncError() => true,
-        _ => false,
+      AsyncData(value: Connected()) => () async {
+        if (requiresReconnect == true &&
+            await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
+          return await ref
+              .read(connectionNotifierProvider.notifier)
+              .reconnect(await ref.read(activeProfileProvider.future));
+        }
+        return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
       },
-      label: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => t.connection.reconnect,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => t.connection.connecting,
-        AsyncData(value: final status) => status.present(t),
-        _ => "",
-      },
-      buttonColor: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => Colors.teal,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => const Color.fromARGB(255, 185, 176, 103),
-        AsyncData(value: Connected()) => buttonTheme.connectedColor!,
-        AsyncData(value: _) => buttonTheme.idleColor!,
-        _ => Colors.red,
-      },
-      image: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => Assets.images.disconnectNorouz,
-        AsyncData(value: Connected()) => Assets.images.connectNorouz,
-        AsyncData(value: _) => Assets.images.disconnectNorouz,
-        _ => Assets.images.disconnectNorouz,
-        AsyncData(value: Disconnected()) || AsyncError() => Assets.images.disconnectNorouz,
-        AsyncData(value: Connected()) => Assets.images.connectNorouz,
-        _ => Assets.images.disconnectNorouz,
-      },
-      newButtonColor: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => Colors.teal,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => const Color.fromARGB(255, 185, 176, 103),
-        AsyncData(value: Connected()) => buttonTheme.connectedColor!,
-        AsyncData(value: _) => buttonTheme.idleColor!,
-        _ => Colors.red,
-      },
-      animated: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => false,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => false,
-        AsyncData(value: Connected()) => true,
-        AsyncData(value: _) => true,
-        _ => false,
-      },
-      useImage: today.day >= 19 && today.day <= 23 && today.month == 3,
-      secureLabel: secureLabel,
+      _ => () {},
+    };
+
+    final label = switch (connectionStatus) {
+      AsyncData(value: Connected()) when requiresReconnect == true => t.connection.reconnect,
+      AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => t.connection.connecting,
+      AsyncData(value: final status) => status.present(t),
+      _ => "",
+    };
+
+    final enabled = switch (connectionStatus) {
+      AsyncData(value: Connected()) || AsyncData(value: Disconnected()) || AsyncError() => true,
+      _ => false,
+    };
+
+    return _RelokantConnectionButton(
+      onTap: onTap,
+      enabled: enabled,
+      label: label,
+      isConnected: isConnected && delay > 0 && delay < 65000,
+      isSwitching: isSwitching,
     );
   }
 }
 
-class _ConnectionButton extends StatelessWidget {
-  const _ConnectionButton({
+class _RelokantConnectionButton extends StatefulWidget {
+  const _RelokantConnectionButton({
     required this.onTap,
     required this.enabled,
     required this.label,
-    required this.buttonColor,
-    required this.image,
-    required this.useImage,
-    required this.newButtonColor,
-    required this.animated,
-    required this.secureLabel,
+    required this.isConnected,
+    required this.isSwitching,
   });
 
   final VoidCallback onTap;
   final bool enabled;
   final String label;
-  final Color buttonColor;
-  final AssetGenImage image;
-  final bool useImage;
-  final String secureLabel;
+  final bool isConnected;
+  final bool isSwitching;
 
-  final Color newButtonColor;
+  @override
+  State<_RelokantConnectionButton> createState() => _RelokantConnectionButtonState();
+}
 
-  final bool animated;
+class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2500),
+    );
+    _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    if (widget.isConnected) {
+      _pulseController.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_RelokantConnectionButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isConnected && !_pulseController.isAnimating) {
+      _pulseController.repeat();
+    } else if (!widget.isConnected && _pulseController.isAnimating) {
+      _pulseController.stop();
+      _pulseController.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isConnected = widget.isConnected;
+
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Semantics(
-          button: true,
-          enabled: enabled,
-          label: label,
-          child: TweenAnimationBuilder<Color?>(
-            tween: ColorTween(end: buttonColor),
-            duration: const Duration(milliseconds: 300),
-            builder: (context, animatedColor, _) {
-              final color = animatedColor ?? buttonColor;
-              return Container(
-                width: 180,
-                height: 180,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.35),
-                      blurRadius: 40,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: color.withValues(alpha: 0.8), width: 3),
-                    color: const Color(0xFF151525),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      key: const ValueKey("home_connection_button"),
-                      customBorder: const CircleBorder(),
-                      focusColor: Colors.grey,
-                      onTap: onTap,
-                      child: Center(
-                        child: Icon(
-                          Icons.power_settings_new_rounded,
-                          size: 64,
-                          color: color,
+        GestureDetector(
+          onTap: widget.onTap,
+          child: SizedBox(
+            width: 200,
+            height: 200,
+            child: AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                final pulseValue = _pulseAnimation.value;
+                // Outer ring expands from 12px to 26px inset
+                final ringInset = isConnected ? 12.0 + (14.0 * pulseValue) : 12.0;
+                final ringOpacity = isConnected ? 1.0 - (0.85 * pulseValue) : 0.0;
+
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Pulse ring (only when connected)
+                    if (isConnected)
+                      Positioned.fill(
+                        child: Container(
+                          margin: EdgeInsets.all(20 - ringInset + 12),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isDark
+                                  ? Color.fromRGBO(0, 229, 160, 0.12 * ringOpacity)
+                                  : Color.fromRGBO(0, 40, 25, 0.15 * ringOpacity),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Outer ring (static)
+                    Container(
+                      width: 184,
+                      height: 184,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark
+                              ? const Color.fromRGBO(0, 229, 160, 0.06)
+                              : const Color.fromRGBO(0, 40, 25, 0.06),
+                          width: 1.5,
                         ),
                       ),
                     ),
-                  ),
-                ),
-              );
-            },
+
+                    // Main button
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOut,
+                      width: 160,
+                      height: 160,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _buttonColor(isDark, isConnected),
+                        border: Border.all(
+                          color: _borderColor(isDark, isConnected),
+                          width: isConnected ? 2.5 : 2.0,
+                        ),
+                        boxShadow: isConnected
+                            ? [
+                                BoxShadow(
+                                  color: isDark
+                                      ? const Color.fromRGBO(0, 229, 160, 0.12)
+                                      : const Color.fromRGBO(0, 60, 35, 0.25),
+                                  blurRadius: isDark ? 60 : 40,
+                                ),
+                                BoxShadow(
+                                  color: isDark
+                                      ? const Color.fromRGBO(0, 229, 160, 0.04)
+                                      : const Color.fromRGBO(0, 60, 35, 0.1),
+                                  blurRadius: isDark ? 120 : 80,
+                                ),
+                              ]
+                            : [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.06),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                      ),
+                      child: Icon(
+                        isConnected ? Icons.check_rounded : Icons.power_settings_new_rounded,
+                        size: 52,
+                        color: _iconColor(isDark, isConnected),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
-        ).animate(target: enabled ? 0 : 1).scaleXY(end: .88, curve: Curves.easeIn),
-        const Gap(24),
-        ExcludeSemantics(
-          child: AnimatedText(label, style: Theme.of(context).textTheme.titleMedium),
         ),
-        if (secureLabel.isNotEmpty) ...[
-          const Gap(4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(FontAwesomeIcons.shieldHalved, size: 16, color: Theme.of(context).colorScheme.secondary),
-              const Gap(4),
-              Text(
-                secureLabel,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
-              ),
-            ],
+        const SizedBox(height: 20),
+        AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 300),
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: isConnected ? FontWeight.w700 : FontWeight.w600,
+            color: _statusTextColor(isDark, isConnected),
           ),
-        ],
+          child: Text(widget.label),
+        ),
       ],
     );
+  }
+
+  Color _buttonColor(bool isDark, bool isConnected) {
+    if (isDark) {
+      return isConnected
+          ? const Color.fromRGBO(0, 229, 160, 0.15)
+          : const Color.fromRGBO(0, 229, 160, 0.06);
+    } else {
+      return isConnected
+          ? const Color.fromRGBO(0, 40, 25, 0.22)
+          : const Color.fromRGBO(0, 40, 25, 0.10);
+    }
+  }
+
+  Color _borderColor(bool isDark, bool isConnected) {
+    if (isDark) {
+      return isConnected
+          ? const Color.fromRGBO(0, 229, 160, 0.5)
+          : const Color.fromRGBO(0, 229, 160, 0.2);
+    } else {
+      return isConnected
+          ? const Color.fromRGBO(0, 40, 25, 0.3)
+          : const Color.fromRGBO(0, 40, 25, 0.08);
+    }
+  }
+
+  Color _iconColor(bool isDark, bool isConnected) {
+    if (isDark) {
+      return isConnected
+          ? const Color(0xFF00E5A0)
+          : const Color.fromRGBO(0, 229, 160, 0.4);
+    } else {
+      return isConnected
+          ? const Color.fromRGBO(0, 30, 18, 0.75)
+          : const Color.fromRGBO(0, 40, 25, 0.3);
+    }
+  }
+
+  Color _statusTextColor(bool isDark, bool isConnected) {
+    if (isDark) {
+      return isConnected
+          ? const Color(0xFF00E5A0)
+          : const Color.fromRGBO(255, 255, 255, 0.35);
+    } else {
+      return isConnected
+          ? const Color.fromRGBO(0, 0, 0, 0.7)
+          : const Color.fromRGBO(0, 0, 0, 0.35);
+    }
   }
 }
