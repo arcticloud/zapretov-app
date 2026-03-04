@@ -1,6 +1,7 @@
 import 'package:circle_flags/circle_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/core/theme/app_theme_mode.dart';
 import 'package:hiddify/core/theme/theme_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
@@ -11,6 +12,7 @@ import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
 import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
+import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class HomePage extends HookConsumerWidget {
@@ -414,11 +416,7 @@ class _Footer extends StatelessWidget {
             icon: Icons.credit_card_outlined,
             label: 'Подписка',
             isDark: isDark,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Скоро'), duration: Duration(seconds: 1)),
-              );
-            },
+            onTap: () => UriUtils.tryLaunch(Uri.parse(Constants.pricingUrl)),
           ),
           const SizedBox(width: 10),
           _FooterItem(
@@ -754,6 +752,22 @@ class _TrialTimerBar extends StatelessWidget {
                                 : const Color(0xFF0a0a0a),
                   ),
                 ),
+                if (isLow || trialState.isExpired) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => UriUtils.tryLaunch(Uri.parse(Constants.pricingUrl)),
+                    child: const Text(
+                      'Купить',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF00E5A0),
+                        decoration: TextDecoration.underline,
+                        decorationColor: Color(0xFF00E5A0),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 6),
@@ -833,10 +847,7 @@ class _TrialExpiredDialog extends StatelessWidget {
               child: FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  // TODO: Navigate to subscription page when ready
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Скоро'), duration: Duration(seconds: 1)),
-                  );
+                  UriUtils.tryLaunch(Uri.parse(Constants.pricingUrl));
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF00E5A0),
