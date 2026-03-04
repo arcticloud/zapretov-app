@@ -195,15 +195,16 @@ class _LocationSelector extends ConsumerWidget {
     final isConnected = connectionStatus.valueOrNull is Connected;
     final countryCode = _detectCountryCode(activeProxy);
     final locationName = _locationName(activeProxy, countryCode);
-    final subtitle = isConnected ? 'Нажмите для выбора' : 'Нажмите для подключения';
+    final subtitle = isConnected ? 'Нажмите для выбора' : 'Подключитесь и выберите сервер';
 
     return GestureDetector(
       onTap: () {
         if (isConnected) {
           _showProxyPicker(context);
         } else {
-          // Trigger VPN connection (same as connection button)
+          // Connect AND open picker so user can switch server immediately
           ref.read(connectionNotifierProvider.notifier).toggleConnection();
+          _showProxyPicker(context);
         }
       },
       child: Container(
@@ -306,6 +307,12 @@ class _LocationSelector extends ConsumerWidget {
       'kazakhstan': 'kz', 'казахстан': 'kz',
       'ukraine': 'ua', 'украина': 'ua', 'kiev': 'ua', 'kyiv': 'ua',
       'finland': 'fi', 'финляндия': 'fi', 'helsinki': 'fi',
+      'spain': 'es', 'испания': 'es', 'madrid': 'es', 'мадрид': 'es',
+      'latvia': 'lv', 'латвия': 'lv', 'riga': 'lv', 'рига': 'lv',
+      'estonia': 'ee', 'эстония': 'ee', 'tallinn': 'ee',
+      'poland': 'pl', 'польша': 'pl', 'warsaw': 'pl', 'варшава': 'pl',
+      'sweden': 'se', 'швеция': 'se', 'stockholm': 'se',
+      'czech': 'cz', 'чехия': 'cz', 'prague': 'cz', 'прага': 'cz',
     };
 
     for (final entry in tagToCountry.entries) {
@@ -364,6 +371,12 @@ class _LocationSelector extends ConsumerWidget {
       'fr': 'Франция',
       'tr': 'Турция',
       'fi': 'Финляндия',
+      'es': 'Испания',
+      'lv': 'Латвия',
+      'ee': 'Эстония',
+      'pl': 'Польша',
+      'se': 'Швеция',
+      'cz': 'Чехия',
     };
     return names[countryCode] ?? countryCode.toUpperCase();
   }
@@ -640,18 +653,34 @@ class _ProxyPickerSheet extends ConsumerWidget {
                     },
                   );
                 },
-                error: (_, __) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      'Подключитесь к VPN,\nчтобы выбрать локацию',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                error: (_, __) {
+                  final connState = ref.watch(connectionNotifierProvider);
+                  final isConnecting = connState.valueOrNull is Connecting;
+                  if (isConnecting) {
+                    return const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Загружаем серверы...'),
+                        ],
+                      ),
+                    );
+                  }
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        'Подключитесь к VPN,\nчтобы выбрать локацию',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
                 loading: () => const Center(child: CircularProgressIndicator()),
               ),
             ),
