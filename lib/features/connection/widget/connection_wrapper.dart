@@ -4,6 +4,7 @@ import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
+import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -45,15 +46,15 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with AppL
   @override
   void initState() {
     super.initState();
-    // remove for now...
-    //
-    // Future.delayed(const Duration(seconds: 2)).then(
-    //   (_) async {
-    //     if (ref.read(startedByUserProvider) && PlatformUtils.isDesktop) {
-    //       loggy.debug("previously started by user, trying to connect");
-    //       return ref.read(connectionNotifierProvider.notifier).mayConnect();
-    //     }
-    //   },
-    // );
+    Future.delayed(const Duration(seconds: 2)).then(
+      (_) async {
+        if (!mounted) return;
+        final autoConnect = ref.read(Preferences.autoConnect);
+        if (autoConnect) {
+          loggy.debug("auto-connect enabled, trying to connect");
+          await ref.read(connectionNotifierProvider.notifier).mayConnect();
+        }
+      },
+    );
   }
 }

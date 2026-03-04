@@ -9,8 +9,8 @@ abstract class Constants {
   static const githubLatestReleaseUrl = "";
   static const appCastUrl = "";
   static const telegramChannelUrl = "https://t.me/relokant_net_bot";
-  static const privacyPolicyUrl = "https://t.me/relokant_net_bot";
-  static const termsAndConditionsUrl = "https://t.me/relokant_net_bot";
+  static const privacyPolicyUrl = "https://relokant.net/privacy.html";
+  static const termsAndConditionsUrl = "https://relokant.net/terms.html";
   static const cfWarpPrivacyPolicy = "https://www.cloudflare.com/application/privacypolicy/";
   static const cfWarpTermsOfService = "https://www.cloudflare.com/application/terms/";
 }

@@ -27,6 +27,20 @@ class GeneralPage extends HookConsumerWidget {
           const ThemeModePrefTile(),
           const EnableAnalyticsPrefTile(),
           SwitchListTile.adaptive(
+            title: Text(t.pages.settings.general.killSwitch),
+            subtitle: Text(t.pages.settings.general.killSwitchMsg),
+            secondary: const Icon(Icons.shield_rounded),
+            value: ref.watch(ConfigOptions.strictRoute),
+            onChanged: ref.read(ConfigOptions.strictRoute.notifier).update,
+          ),
+          SwitchListTile.adaptive(
+            title: Text(t.pages.settings.general.autoConnect),
+            subtitle: Text(t.pages.settings.general.autoConnectMsg),
+            secondary: const Icon(Icons.flash_on_rounded),
+            value: ref.watch(Preferences.autoConnect),
+            onChanged: ref.read(Preferences.autoConnect.notifier).update,
+          ),
+          SwitchListTile.adaptive(
             title: Text(t.pages.settings.general.autoIpCheck),
             value: ref.watch(Preferences.autoCheckIp),
             secondary: const Icon(Icons.flag_rounded),

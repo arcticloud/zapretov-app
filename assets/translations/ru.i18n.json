@@ -230,7 +230,11 @@
         "urlTestInterval": "Интервал теста URL",
         "clashApiPort": "Порт Clash API",
         "useXrayCoreWhenPossible": "Использовать xray-core, если возможно",
-        "useXrayCoreWhenPossibleMsg": "Использовать xray-core при обработке ссылок на подписку. Необходимо повторно импортировать ссылку, чтобы включить эту опцию."
+        "useXrayCoreWhenPossibleMsg": "Использовать xray-core при обработке ссылок на подписку. Необходимо повторно импортировать ссылку, чтобы включить эту опцию.",
+        "killSwitch": "Kill Switch",
+        "killSwitchMsg": "Блокировать интернет при отключении VPN",
+        "autoConnect": "Автоподключение",
+        "autoConnectMsg": "Подключаться к VPN при запуске приложения"
       },
       "routing": {
         "title": "Маршрутизация",

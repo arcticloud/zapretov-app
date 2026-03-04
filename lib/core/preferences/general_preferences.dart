@@ -102,6 +102,8 @@ abstract class Preferences {
 
   static final startedByUser = PreferencesNotifier.create<bool, bool>("started_by_user", false);
 
+  static final autoConnect = PreferencesNotifier.create<bool, bool>("auto_connect", true);
+
   static final storeReviewedByUser = PreferencesNotifier.create<bool, bool>("store_reviewed_by_user", false);
 
   static final actionAtClose = PreferencesNotifier.create<ActionsAtClosing, String>(
