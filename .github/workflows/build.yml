@@ -232,3 +232,41 @@ jobs:
           name: windows-installer
           path: out/
           retention-days: 30
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install deps
+        run: |
+          brew install create-dmg
+          npm install -g appdmg
+          dart pub global activate fastforge
+          echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+
+      - name: Prepare
+        run: make macos-prepare
+
+      - name: Build macOS DMG
+        run: |
+          fastforge package --platform macos --targets dmg --skip-clean --build-target=lib/main.dart --build-dart-define=sentry_dsn=
+
+      - name: Collect DMG
+        run: |
+          mkdir -p out
+          cp dist/*/*.dmg out/Relokant-macOS.dmg || true
+          ls -la out/
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: out/
+          retention-days: 30
