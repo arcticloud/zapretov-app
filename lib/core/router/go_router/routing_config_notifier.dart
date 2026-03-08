@@ -11,7 +11,6 @@ import 'package:hiddify/features/about/widget/about_page.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/features/splash/splash_page.dart';
-import 'package:hiddify/features/log/overview/logs_page.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_page.dart';
 import 'package:hiddify/features/profile/details/profile_details_page.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
@@ -34,7 +33,6 @@ final branchesScope = <String, FocusScopeNode>{
   'home': FocusScopeNode(),
   'profiles': FocusScopeNode(),
   'settings': FocusScopeNode(),
-  'logs': FocusScopeNode(),
   'about': FocusScopeNode(),
 };
 
@@ -196,12 +194,6 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                           path: '/warp-options',
                           pageBuilder: (_, state) =>
                               customTransition(TransitionType.slide, state.pageKey, const WarpOptionsPage()),
-                        ),
-                        GoRoute(
-                          name: 'logs',
-                          path: '/logs',
-                          pageBuilder: (_, state) =>
-                              customTransition(TransitionType.slide, state.pageKey, const LogsPage()),
                         ),
                         GoRoute(
                           name: 'about',

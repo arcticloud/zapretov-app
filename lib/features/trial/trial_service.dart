@@ -59,6 +59,8 @@ class TrialNotifier extends StateNotifier<TrialState> {
 
   final SharedPreferences _prefs;
   Timer? _timer;
+  DateTime? _timerStartedAt; // tracks when timer was last running (for background catch-up)
+  bool _timerRunning = false;
 
   void _loadState() {
     final isTrial = _prefs.getBool(_keyIsTrial) ?? false;
@@ -152,25 +154,77 @@ class TrialNotifier extends StateNotifier<TrialState> {
     _timer?.cancel();
     if (!state.isTrial || state.isExpired) return;
 
+    _timerRunning = true;
+    _timerStartedAt = DateTime.now();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      final used = (_prefs.getInt(_keyUsedSeconds) ?? 0) + 1;
-      _prefs.setInt(_keyUsedSeconds, used);
+      _tick();
+    });
+  }
 
-      final remaining = (_dailyLimitSeconds - used).clamp(0, _dailyLimitSeconds);
+  void _tick() {
+    final used = (_prefs.getInt(_keyUsedSeconds) ?? 0) + 1;
+    _prefs.setInt(_keyUsedSeconds, used);
+
+    final remaining = (_dailyLimitSeconds - used).clamp(0, _dailyLimitSeconds);
+    state = state.copyWith(
+      remainingSeconds: remaining,
+      isExpired: remaining <= 0,
+    );
+
+    if (remaining <= 0) {
+      _timer?.cancel();
+      _timerRunning = false;
+    }
+  }
+
+  /// Call when VPN disconnects — stop counting
+  void stopTimer() {
+    _timer?.cancel();
+    _timerRunning = false;
+    _timerStartedAt = null;
+  }
+
+  /// Call when app goes to background — pause Dart timer but record timestamp
+  void onBackground() {
+    if (!_timerRunning) return;
+    _timer?.cancel();
+    // _timerStartedAt stays set so we know we were counting
+  }
+
+  /// Call when app returns to foreground — catch up on missed time
+  void onForeground() {
+    if (!_timerRunning || _timerStartedAt == null) return;
+    if (!state.isTrial || state.isExpired) return;
+
+    // Calculate seconds elapsed while in background
+    final now = DateTime.now();
+    final elapsed = now.difference(_timerStartedAt!).inSeconds;
+    // We already counted 1 sec per tick before going background,
+    // so only add the difference (elapsed - 0 since timer was stopped)
+    if (elapsed > 1) {
+      final missedSeconds = elapsed - 1; // -1 because last tick was right before pause
+      final currentUsed = _prefs.getInt(_keyUsedSeconds) ?? 0;
+      final newUsed = currentUsed + missedSeconds;
+      _prefs.setInt(_keyUsedSeconds, newUsed);
+
+      final remaining = (_dailyLimitSeconds - newUsed).clamp(0, _dailyLimitSeconds);
       state = state.copyWith(
         remainingSeconds: remaining,
         isExpired: remaining <= 0,
       );
 
       if (remaining <= 0) {
-        _timer?.cancel();
+        _timerRunning = false;
+        _timerStartedAt = null;
+        return;
       }
-    });
-  }
+    }
 
-  /// Call when VPN disconnects — stop counting
-  void stopTimer() {
-    _timer?.cancel();
+    // Restart the periodic timer
+    _timerStartedAt = DateTime.now();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _tick();
+    });
   }
 
   /// Mark as upgraded (no longer trial)

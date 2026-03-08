@@ -26,14 +26,32 @@ class SettingsPage extends HookConsumerWidget {
             namedLocation: context.namedLocation('general'),
           ),
           SettingsSection(
-            title: t.pages.logs.title,
-            icon: Icons.description_rounded,
-            namedLocation: context.namedLocation('logs'),
-          ),
-          SettingsSection(
             title: t.pages.about.title,
             icon: Icons.info_rounded,
             namedLocation: context.namedLocation('about'),
+          ),
+          const Divider(height: 1),
+          ExpansionTile(
+            leading: const Icon(Icons.build_rounded),
+            title: Text(t.pages.settings.advancedTitle),
+            childrenPadding: EdgeInsets.zero,
+            children: [
+              SettingsSection(
+                title: t.pages.settings.inbound.title,
+                icon: Icons.tune_rounded,
+                namedLocation: context.namedLocation('inboundOptions'),
+              ),
+              SettingsSection(
+                title: t.pages.settings.dns.title,
+                icon: Icons.dns_rounded,
+                namedLocation: context.namedLocation('dnsOptions'),
+              ),
+              SettingsSection(
+                title: t.pages.settings.routing.title,
+                icon: Icons.alt_route_rounded,
+                namedLocation: context.namedLocation('routeOptions'),
+              ),
+            ],
           ),
         ],
       ),

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:circle_flags/circle_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -9,11 +11,22 @@ import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
+import 'package:hiddify/features/purchase/purchase_page.dart';
 import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+void _openPurchase(BuildContext context) {
+  if (Platform.isIOS || Platform.isAndroid) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const PurchasePage()),
+    );
+  } else {
+    UriUtils.tryLaunch(Uri.parse(Constants.pricingUrl));
+  }
+}
 
 class HomePage extends HookConsumerWidget {
   const HomePage({super.key});
@@ -416,7 +429,7 @@ class _Footer extends StatelessWidget {
             icon: Icons.credit_card_outlined,
             label: 'Подписка',
             isDark: isDark,
-            onTap: () => UriUtils.tryLaunch(Uri.parse(Constants.pricingUrl)),
+            onTap: () => _openPurchase(context),
           ),
           const SizedBox(width: 10),
           _FooterItem(
@@ -755,7 +768,7 @@ class _TrialTimerBar extends StatelessWidget {
                 if (isLow || trialState.isExpired) ...[
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: () => UriUtils.tryLaunch(Uri.parse(Constants.pricingUrl)),
+                    onTap: () => _openPurchase(context),
                     child: const Text(
                       'Купить',
                       style: TextStyle(
@@ -847,7 +860,7 @@ class _TrialExpiredDialog extends StatelessWidget {
               child: FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  UriUtils.tryLaunch(Uri.parse(Constants.pricingUrl));
+                  _openPurchase(context);
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF00E5A0),

@@ -187,6 +187,7 @@
     },
     "settings": {
       "title": "Настройки",
+      "advancedTitle": "Расширенные",
       "resetTunnel": "Сбросить профиль VPN",
       "options": {
         "import": {

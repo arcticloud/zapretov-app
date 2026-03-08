@@ -184,6 +184,7 @@
     },
     "settings": {
       "title": "Settings",
+      "advancedTitle": "Advanced",
       "resetTunnel": "Reset VPN profile",
       "options": {
         "import": {
