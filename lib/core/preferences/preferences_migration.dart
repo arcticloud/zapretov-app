@@ -118,12 +118,14 @@ class PreferencesVersion2Migration extends PreferencesMigrationStep with InfraLo
 
   @override
   Future<void> migrate() async {
-    // On Windows, TUN is no longer supported (requires admin privileges).
+    // On Windows and macOS, TUN is no longer supported.
+    // Windows: requires admin privileges (Error 740, SmartScreen).
+    // macOS: Network Extension entitlements not available (no Apple Developer Program).
     // Force service mode to system-proxy if it was set to vpn (TUN).
-    if (Platform.isWindows) {
+    if (Platform.isWindows || Platform.isMacOS) {
       final serviceMode = sharedPreferences.getString("service-mode");
       if (serviceMode == "vpn") {
-        loggy.debug("Windows: changing service-mode from vpn (TUN) to system-proxy");
+        loggy.debug("${Platform.operatingSystem}: changing service-mode from vpn (TUN) to system-proxy");
         await sharedPreferences.setString("service-mode", "system-proxy");
       }
     }
