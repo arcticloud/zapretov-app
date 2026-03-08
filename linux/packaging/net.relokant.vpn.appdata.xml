@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>net.relokant.vpn</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Relokant</name>
+  <summary>VPN for Russian-speaking expats</summary>
+
+  <developer_name>Relokant</developer_name>
+  <update_contact>support@relokant.net</update_contact>
+
+  <description>
+    <p>
+      Relokant is a VPN client that gives you a Russian IP address from anywhere in the world.
+      Access Gosuslugi, Russian banks, and streaming services while abroad.
+    </p>
+    <p>
+      Built on Xray with VLESS Reality protocol for reliable and secure connections.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">relokant.desktop</launchable>
+
+  <icon type="stock">relokant</icon>
+
+  <categories>
+    <category>Network</category>
+  </categories>
+
+  <keywords>
+    <keyword>Relokant</keyword>
+    <keyword>VPN</keyword>
+    <keyword>Proxy</keyword>
+    <keyword>Xray</keyword>
+    <keyword>VLESS</keyword>
+  </keywords>
+
+  <mime-types>
+    <mime-type>x-scheme-handler/relokant</mime-type>
+    <mime-type>x-scheme-handler/hiddify</mime-type>
+    <mime-type>x-scheme-handler/v2ray</mime-type>
+    <mime-type>x-scheme-handler/v2rayn</mime-type>
+    <mime-type>x-scheme-handler/v2rayng</mime-type>
+    <mime-type>x-scheme-handler/clash</mime-type>
+    <mime-type>x-scheme-handler/clashmeta</mime-type>
+    <mime-type>x-scheme-handler/sing-box</mime-type>
+  </mime-types>
+
+  <url type="homepage">https://relokant.net</url>
+
+  <provides>
+    <binary>relokant</binary>
+  </provides>
+
+  <releases>
+    <release version="1.0.0" date="2026-03-03">
+      <description>
+        <p>Initial release of Relokant VPN.</p>
+      </description>
+    </release>
+  </releases>
+
+  <translation type="gettext">hiddify</translation>
+
+  <custom>
+    <value key="PackageName">relokant</value>
+    <value key="Priority">optional</value>
+    <value key="Section">x11</value>
+    <value key="InstalledSize">6604</value>
+    <value key="Essential">false</value>
+  </custom>
+</component>

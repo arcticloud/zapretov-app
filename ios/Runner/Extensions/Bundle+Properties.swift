@@ -9,10 +9,10 @@ import Foundation
 
 extension Bundle {
     var serviceIdentifier: String {
-        (infoDictionary?["SERVICE_IDENTIFIER"] as? String) ?? bundleIdentifier ?? "net.zapretov.vpn"
+        (infoDictionary?["SERVICE_IDENTIFIER"] as? String) ?? bundleIdentifier ?? "net.relokant.vpn"
     }
 
     var baseBundleIdentifier: String {
-        (infoDictionary?["BASE_BUNDLE_IDENTIFIER"] as? String) ?? bundleIdentifier ?? "net.zapretov.vpn"
+        (infoDictionary?["BASE_BUNDLE_IDENTIFIER"] as? String) ?? bundleIdentifier ?? "net.relokant.vpn"
     }
 }

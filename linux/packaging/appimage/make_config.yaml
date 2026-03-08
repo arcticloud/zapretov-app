@@ -28,6 +28,7 @@ startup_notify: true
 # app_links setup for Linux
 # https://github.com/llfbandit/app_links/blob/master/doc/README_linux.md
 supported_mime_type:
+  - x-scheme-handler/relokant
   - x-scheme-handler/hiddify
   - x-scheme-handler/v2ray
   - x-scheme-handler/v2rayn
@@ -47,4 +48,4 @@ supported_mime_type:
 #   - libcurl.so.4
 include: []
 
-metainfo: linux/packaging/app.hiddify.com.appdata.xml
+metainfo: linux/packaging/net.relokant.vpn.appdata.xml

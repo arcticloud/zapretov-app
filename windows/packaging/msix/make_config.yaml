@@ -1,12 +1,12 @@
 display_name: Relokant
 publisher_display_name: Relokant
-identity_name: net.zapretov.vpn
+identity_name: net.relokant.vpn
 msix_version: 4.0.5.0
 logo_path: windows\runner\resources\app_icon.ico
 capabilities: internetClient, internetClientServer, privateNetworkClientServer
 languages: en-us, ru-ru
-protocol_activation: zapretov
-execution_alias: zapretov
+protocol_activation: relokant
+execution_alias: relokant
 certificate_path: windows\sign.pfx
 certificate_password:
 publisher: CN=8CB43675-F44B-4AA5-9372-E8727781BDC4

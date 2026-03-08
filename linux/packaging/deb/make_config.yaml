@@ -1,5 +1,5 @@
 display_name: Relokant
-package_name: hiddify
+package_name: relokant
 maintainer:
   name: relokant
   email: support@relokant.net
@@ -16,8 +16,8 @@ icon: assets/images/source/ic_launcher_border.png
 # 3. Update the desktop database to apply changes immediately
 postinstall_scripts:
   - echo "Setting up Relokant..."
-  - sudo sed -i '/^\[Desktop Entry\]/a StartupWMClass=app.hiddify.com' "/usr/share/applications/hiddify.desktop"
-  - echo "Search and remove hiddify.desktop from .local"
+  - sudo sed -i '/^\[Desktop Entry\]/a StartupWMClass=app.hiddify.com' "/usr/share/applications/relokant.desktop"
+  - echo "Search and remove old hiddify.desktop from .local"
   - for user_dir in /home/*; do if [ -f "$user_dir/.local/share/applications/hiddify.desktop" ]; then rm -f "$user_dir/.local/share/applications/hiddify.desktop"; echo "Found and removed hiddify.desktop from $user_dir .local"; fi; done
   - update-desktop-database /usr/share/applications
   - echo "Relokant is ready to use :)"
@@ -46,6 +46,7 @@ startup_notify: true
 # app_links setup for Linux
 # https://github.com/llfbandit/app_links/blob/master/doc/README_linux.md
 supported_mime_type:
+  - x-scheme-handler/relokant
   - x-scheme-handler/hiddify
   - x-scheme-handler/v2ray
   - x-scheme-handler/v2rayn
@@ -54,4 +55,4 @@ supported_mime_type:
   - x-scheme-handler/clashmeta
   - x-scheme-handler/sing-box
 
-metainfo: linux/packaging/app.hiddify.com.appdata.xml
+metainfo: linux/packaging/net.relokant.vpn.appdata.xml
