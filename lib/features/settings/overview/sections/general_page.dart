@@ -78,76 +78,83 @@ class GeneralPage extends HookConsumerWidget {
             ),
           ],
           if (PlatformUtils.isAndroid) const BatteryOptimizationWidget(),
-          SwitchListTile.adaptive(
-            title: Text(t.pages.settings.general.memoryLimit),
-            subtitle: Text(t.pages.settings.general.memoryLimitMsg),
-            secondary: const Icon(Icons.memory_rounded),
-            value: !ref.watch(Preferences.disableMemoryLimit),
-            onChanged: (value) async => await ref.read(Preferences.disableMemoryLimit.notifier).update(!value),
-          ),
-          SwitchListTile.adaptive(
+          ExpansionTile(
+            leading: const Icon(Icons.build_rounded),
             title: Text(t.pages.settings.general.debugMode),
-            secondary: const Icon(Icons.bug_report_rounded),
-            value: ref.watch(debugModeNotifierProvider),
-            onChanged: (value) async {
-              if (value)
-                await ref
-                    .read(dialogNotifierProvider.notifier)
-                    .showOk(t.pages.settings.general.debugMode, t.pages.settings.general.debugModeMsg);
-              await ref.read(debugModeNotifierProvider.notifier).update(value);
-            },
-          ),
-          if (ref.watch(debugModeNotifierProvider)) ...[
-            ChoicePreferenceWidget(
-              selected: ref.watch(ConfigOptions.logLevel),
-              preferences: ref.watch(ConfigOptions.logLevel.notifier),
-              choices: LogLevel.choices,
-              title: t.pages.settings.general.logLevel,
-              icon: Icons.description_rounded,
-              presentChoice: (value) => value.name.toUpperCase(),
-            ),
-            ValuePreferenceWidget(
-              value: ref.watch(ConfigOptions.connectionTestUrl),
-              preferences: ref.watch(ConfigOptions.connectionTestUrl.notifier),
-              title: t.pages.settings.general.connectionTestUrl,
-              icon: Icons.link_rounded,
-            ),
-            ListTile(
-              title: Text(t.pages.settings.general.urlTestInterval),
-              subtitle: Text(ref.watch(ConfigOptions.urlTestInterval).toApproximateTime(isRelativeToNow: false)),
-              leading: const Icon(Icons.timer_rounded),
-              onTap: () async => await ref
-                  .read(dialogNotifierProvider.notifier)
-                  .showSettingSlider(
-                    title: t.pages.settings.general.urlTestInterval,
-                    initialValue: ref.watch(ConfigOptions.urlTestInterval).inMinutes.coerceIn(0, 60).toDouble(),
-                    onReset: ref.read(ConfigOptions.urlTestInterval.notifier).reset,
-                    min: 1,
-                    max: 60,
-                    divisions: 60,
-                    labelGen: (value) => Duration(minutes: value.toInt()).toApproximateTime(isRelativeToNow: false),
-                  )
-                  .then((value) async {
-                    if (value == null) return;
-                    await ref.read(ConfigOptions.urlTestInterval.notifier).update(Duration(minutes: value.toInt()));
-                  }),
-            ),
-            ValuePreferenceWidget(
-              value: ref.watch(ConfigOptions.clashApiPort),
-              preferences: ref.watch(ConfigOptions.clashApiPort.notifier),
-              title: t.pages.settings.general.clashApiPort,
-              icon: Icons.api_rounded,
-              validateInput: isPort,
-              digitsOnly: true,
-              inputToValue: int.tryParse,
-            ),
-          ],
-          SwitchListTile.adaptive(
-            title: Text(t.pages.settings.general.useXrayCoreWhenPossible),
-            subtitle: Text(t.pages.settings.general.useXrayCoreWhenPossibleMsg),
-            secondary: const Icon(Icons.extension_rounded),
-            value: ref.watch(ConfigOptions.useXrayCoreWhenPossible),
-            onChanged: ref.read(ConfigOptions.useXrayCoreWhenPossible.notifier).update,
+            childrenPadding: EdgeInsets.zero,
+            children: [
+              SwitchListTile.adaptive(
+                title: Text(t.pages.settings.general.memoryLimit),
+                subtitle: Text(t.pages.settings.general.memoryLimitMsg),
+                secondary: const Icon(Icons.memory_rounded),
+                value: !ref.watch(Preferences.disableMemoryLimit),
+                onChanged: (value) async => await ref.read(Preferences.disableMemoryLimit.notifier).update(!value),
+              ),
+              SwitchListTile.adaptive(
+                title: Text(t.pages.settings.general.debugMode),
+                secondary: const Icon(Icons.bug_report_rounded),
+                value: ref.watch(debugModeNotifierProvider),
+                onChanged: (value) async {
+                  if (value)
+                    await ref
+                        .read(dialogNotifierProvider.notifier)
+                        .showOk(t.pages.settings.general.debugMode, t.pages.settings.general.debugModeMsg);
+                  await ref.read(debugModeNotifierProvider.notifier).update(value);
+                },
+              ),
+              if (ref.watch(debugModeNotifierProvider)) ...[
+                ChoicePreferenceWidget(
+                  selected: ref.watch(ConfigOptions.logLevel),
+                  preferences: ref.watch(ConfigOptions.logLevel.notifier),
+                  choices: LogLevel.choices,
+                  title: t.pages.settings.general.logLevel,
+                  icon: Icons.description_rounded,
+                  presentChoice: (value) => value.name.toUpperCase(),
+                ),
+                ValuePreferenceWidget(
+                  value: ref.watch(ConfigOptions.connectionTestUrl),
+                  preferences: ref.watch(ConfigOptions.connectionTestUrl.notifier),
+                  title: t.pages.settings.general.connectionTestUrl,
+                  icon: Icons.link_rounded,
+                ),
+                ListTile(
+                  title: Text(t.pages.settings.general.urlTestInterval),
+                  subtitle: Text(ref.watch(ConfigOptions.urlTestInterval).toApproximateTime(isRelativeToNow: false)),
+                  leading: const Icon(Icons.timer_rounded),
+                  onTap: () async => await ref
+                      .read(dialogNotifierProvider.notifier)
+                      .showSettingSlider(
+                        title: t.pages.settings.general.urlTestInterval,
+                        initialValue: ref.watch(ConfigOptions.urlTestInterval).inMinutes.coerceIn(0, 60).toDouble(),
+                        onReset: ref.read(ConfigOptions.urlTestInterval.notifier).reset,
+                        min: 1,
+                        max: 60,
+                        divisions: 60,
+                        labelGen: (value) => Duration(minutes: value.toInt()).toApproximateTime(isRelativeToNow: false),
+                      )
+                      .then((value) async {
+                        if (value == null) return;
+                        await ref.read(ConfigOptions.urlTestInterval.notifier).update(Duration(minutes: value.toInt()));
+                      }),
+                ),
+                ValuePreferenceWidget(
+                  value: ref.watch(ConfigOptions.clashApiPort),
+                  preferences: ref.watch(ConfigOptions.clashApiPort.notifier),
+                  title: t.pages.settings.general.clashApiPort,
+                  icon: Icons.api_rounded,
+                  validateInput: isPort,
+                  digitsOnly: true,
+                  inputToValue: int.tryParse,
+                ),
+              ],
+              SwitchListTile.adaptive(
+                title: Text(t.pages.settings.general.useXrayCoreWhenPossible),
+                subtitle: Text(t.pages.settings.general.useXrayCoreWhenPossibleMsg),
+                secondary: const Icon(Icons.extension_rounded),
+                value: ref.watch(ConfigOptions.useXrayCoreWhenPossible),
+                onChanged: ref.read(ConfigOptions.useXrayCoreWhenPossible.notifier).update,
+              ),
+            ],
           ),
         ],
       ),
