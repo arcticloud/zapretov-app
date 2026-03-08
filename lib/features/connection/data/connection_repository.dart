@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/model/directories.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/core/utils/exception_handler.dart';
+import 'package:hiddify/features/connection/data/macos_proxy_helper.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/profile/data/profile_path_resolver.dart';
@@ -68,11 +71,21 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
   @override
   Stream<ConnectionStatus> watchConnectionStatus() {
     return singbox.watchStatus().map(
-      (event) => switch (event) {
-        CoreStopped() => Disconnected(event.getCoreAlert()),
-        CoreStarting() => const Connecting(),
-        CoreStarted() => const Connected(),
-        CoreStopping() => const Disconnecting(),
+      (event) {
+        // On macOS, manage system proxy via networksetup
+        if (Platform.isMacOS) {
+          if (event is CoreStarted && _configOptionsSnapshot?.setSystemProxy == true) {
+            MacosProxyHelper().enable(_configOptionsSnapshot!.mixedPort);
+          } else if (event is CoreStopped || event is CoreStopping) {
+            MacosProxyHelper().disable();
+          }
+        }
+        return switch (event) {
+          CoreStopped() => Disconnected(event.getCoreAlert()),
+          CoreStarting() => const Connecting(),
+          CoreStarted() => const Connected(),
+          CoreStopping() => const Disconnecting(),
+        };
       },
     );
   }
