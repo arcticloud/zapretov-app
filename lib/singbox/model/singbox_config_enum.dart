@@ -20,7 +20,9 @@ enum ServiceMode {
 
   /// supported service mode based on platform, use this instead of [values] in UI
   static List<ServiceMode> get choices {
-    if (Platform.isWindows || Platform.isLinux) {
+    if (Platform.isWindows) {
+      return [proxy, systemProxy];
+    } else if (Platform.isLinux) {
       return values;
     } else if (Platform.isMacOS) {
       return [proxy, systemProxy, tun];
