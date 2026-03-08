@@ -26,7 +26,7 @@ class GeneralPage extends HookConsumerWidget {
           const LocalePrefTile(),
           const ThemeModePrefTile(),
           const EnableAnalyticsPrefTile(),
-          if (!PlatformUtils.isWindows)
+          if (!PlatformUtils.isWindows || const bool.fromEnvironment('ENABLE_TUN'))
             SwitchListTile.adaptive(
               title: Text(t.pages.settings.general.killSwitch),
               subtitle: Text(t.pages.settings.general.killSwitchMsg),

@@ -18,10 +18,14 @@ enum ServiceMode {
 
   static ServiceMode get defaultMode => PlatformUtils.isDesktop ? systemProxy : tun;
 
+  /// Whether TUN mode is enabled via compile-time flag (--dart-define=ENABLE_TUN=true).
+  /// Used for Windows Pro build that runs with admin privileges.
+  static const _tunEnabled = bool.fromEnvironment('ENABLE_TUN');
+
   /// supported service mode based on platform, use this instead of [values] in UI
   static List<ServiceMode> get choices {
     if (Platform.isWindows) {
-      return [proxy, systemProxy];
+      return _tunEnabled ? [proxy, systemProxy, tun] : [proxy, systemProxy];
     } else if (Platform.isLinux) {
       return values;
     } else if (Platform.isMacOS) {
