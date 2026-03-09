@@ -17,6 +17,7 @@ class PreferencesMigration with InfraLogger {
       PreferencesVersion1Migration(sharedPreferences),
       PreferencesVersion2Migration(sharedPreferences),
       PreferencesVersion3Migration(sharedPreferences),
+      PreferencesVersion4Migration(sharedPreferences),
     ];
 
     if (currentVersion == migrationSteps.length) {
@@ -119,13 +120,13 @@ class PreferencesVersion2Migration extends PreferencesMigrationStep with InfraLo
 
   @override
   Future<void> migrate() async {
-    // Force system-proxy on platforms where TUN is problematic:
-    // - Android: TUN requires VPN permission dialog, fails on tablets, causes "failed to start background core"
+    // Force system-proxy on desktop platforms where TUN is problematic:
     // - Windows standard (no ENABLE_TUN): requires admin privileges (Error 740, SmartScreen)
     // - macOS: Network Extension entitlements not available
+    // Android MUST stay on VPN mode (system-proxy requires root).
     // Windows Pro (ENABLE_TUN=true): TUN is available, skip migration.
     const tunEnabled = bool.fromEnvironment('ENABLE_TUN');
-    if (Platform.isAndroid || (Platform.isWindows && !tunEnabled) || Platform.isMacOS) {
+    if ((Platform.isWindows && !tunEnabled) || Platform.isMacOS) {
       final serviceMode = sharedPreferences.getString("service-mode");
       if (serviceMode == "vpn") {
         loggy.debug("${Platform.operatingSystem}: changing service-mode from vpn (TUN) to system-proxy");
@@ -140,16 +141,38 @@ class PreferencesVersion3Migration extends PreferencesMigrationStep with InfraLo
 
   @override
   Future<void> migrate() async {
-    // Fix: on fresh install, service-mode was never written to SharedPreferences.
-    // Flutter used in-memory default "system-proxy", but Kotlin read SharedPreferences
-    // and got null → defaulted to "vpn" → started VPNService → crash.
-    // This migration ensures service-mode is explicitly written for all platforms.
+    // Ensure service-mode is explicitly written to SharedPreferences.
+    // On Android: must be "vpn" (system-proxy requires root).
+    // On desktop: must be "system-proxy" (TUN unavailable without admin/entitlements).
     const tunEnabled = bool.fromEnvironment('ENABLE_TUN');
-    if (Platform.isAndroid || (Platform.isWindows && !tunEnabled) || Platform.isMacOS) {
-      final serviceMode = sharedPreferences.getString("service-mode");
+    final serviceMode = sharedPreferences.getString("service-mode");
+
+    if (Platform.isAndroid) {
+      if (serviceMode == null || serviceMode == "system-proxy" || serviceMode == "proxy") {
+        loggy.debug("android: setting service-mode to vpn (was: $serviceMode)");
+        await sharedPreferences.setString("service-mode", "vpn");
+      }
+    } else if ((Platform.isWindows && !tunEnabled) || Platform.isMacOS) {
       if (serviceMode == null || serviceMode == "vpn") {
         loggy.debug("${Platform.operatingSystem}: setting service-mode to system-proxy (was: $serviceMode)");
         await sharedPreferences.setString("service-mode", "system-proxy");
+      }
+    }
+  }
+}
+
+class PreferencesVersion4Migration extends PreferencesMigrationStep with InfraLogger {
+  PreferencesVersion4Migration(super.sharedPreferences);
+
+  @override
+  Future<void> migrate() async {
+    // Fix: earlier V3 migration (commit f55b0b35) incorrectly set "system-proxy" on Android.
+    // Force "vpn" on Android for all existing installs regardless of current stored value.
+    if (Platform.isAndroid) {
+      final serviceMode = sharedPreferences.getString("service-mode");
+      if (serviceMode != "vpn") {
+        loggy.debug("android v4: resetting service-mode to vpn (was: $serviceMode)");
+        await sharedPreferences.setString("service-mode", "vpn");
       }
     }
   }
