@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
@@ -6,7 +8,11 @@ import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
+import 'package:hiddify/features/purchase/purchase_page.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
+import 'package:hiddify/features/trial/trial_service.dart';
+import 'package:hiddify/core/model/constants.dart';
+import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class ConnectionButton extends HookConsumerWidget {
@@ -19,11 +25,15 @@ class ConnectionButton extends HookConsumerWidget {
     final activeProxy = ref.watch(activeProxyNotifierProvider);
     final delay = activeProxy.valueOrNull?.urlTestDelay ?? 0;
     final requiresReconnect = ref.watch(configOptionNotifierProvider).valueOrNull;
+    final trial = ref.watch(trialProvider);
 
     final isConnected = connectionStatus.valueOrNull is Connected;
     final isConnecting = connectionStatus.valueOrNull is Connecting;
     final isDisconnecting = connectionStatus.valueOrNull is Disconnecting;
     final isSwitching = isConnecting || isDisconnecting;
+
+    // Block connection if trial expired
+    final trialBlocked = trial.isTrial && trial.isExpired;
 
     final onTap = switch (connectionStatus) {
       AsyncData(value: Connected()) when requiresReconnect == true => () async {
@@ -31,6 +41,11 @@ class ConnectionButton extends HookConsumerWidget {
         return await ref.read(connectionNotifierProvider.notifier).reconnect(activeProfile);
       },
       AsyncData(value: Disconnected()) || AsyncError() => () async {
+        // Prevent reconnection if trial is expired
+        if (trialBlocked) {
+          _showTrialExpiredDialog(context);
+          return;
+        }
         if (ref.read(activeProfileProvider).valueOrNull == null) {
           await ref.read(dialogNotifierProvider.notifier).showNoActiveProfile();
           ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile();
@@ -65,10 +80,70 @@ class ConnectionButton extends HookConsumerWidget {
 
     return _RelokantConnectionButton(
       onTap: onTap,
-      enabled: enabled,
-      label: label,
+      enabled: trialBlocked ? false : enabled,
+      label: trialBlocked ? 'Лимит исчерпан' : label,
       isConnected: isConnected && delay > 0 && delay < 65000,
       isSwitching: isSwitching,
+      isTrialBlocked: trialBlocked,
+    );
+  }
+
+  static void _showTrialExpiredDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64, height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFFF4444).withValues(alpha: 0.1),
+                ),
+                child: const Icon(Icons.timer_off_outlined, size: 32, color: Color(0xFFFF4444)),
+              ),
+              const SizedBox(height: 20),
+              Text('Лимит исчерпан', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              Text(
+                'Вы использовали 10 минут сегодня.\nВозвращайтесь завтра или оформите подписку.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.5),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity, height: 52,
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    if (Platform.isIOS || Platform.isAndroid) {
+                      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PurchasePage()));
+                    } else {
+                      UriUtils.tryLaunch(Uri.parse(Constants.pricingUrl));
+                    }
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF00E5A0),
+                    foregroundColor: const Color(0xFF0a0a0a),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: const Text('Оформить подписку', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('Вернуться завтра', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 14)),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -80,6 +155,7 @@ class _RelokantConnectionButton extends StatefulWidget {
     required this.label,
     required this.isConnected,
     required this.isSwitching,
+    this.isTrialBlocked = false,
   });
 
   final VoidCallback onTap;
@@ -87,6 +163,7 @@ class _RelokantConnectionButton extends StatefulWidget {
   final String label;
   final bool isConnected;
   final bool isSwitching;
+  final bool isTrialBlocked;
 
   @override
   State<_RelokantConnectionButton> createState() => _RelokantConnectionButtonState();
@@ -248,6 +325,11 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
   }
 
   Color _buttonColor(bool isDark, bool isConnected) {
+    if (widget.isTrialBlocked) {
+      return isDark
+          ? const Color.fromRGBO(255, 255, 255, 0.04)
+          : const Color.fromRGBO(0, 0, 0, 0.06);
+    }
     if (isDark) {
       return isConnected
           ? const Color.fromRGBO(0, 229, 160, 0.15)
@@ -272,6 +354,11 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
   }
 
   Color _iconColor(bool isDark, bool isConnected) {
+    if (widget.isTrialBlocked) {
+      return isDark
+          ? const Color.fromRGBO(255, 255, 255, 0.15)
+          : const Color.fromRGBO(0, 0, 0, 0.15);
+    }
     if (isDark) {
       return isConnected
           ? const Color(0xFF00E5A0)

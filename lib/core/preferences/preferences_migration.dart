@@ -118,13 +118,13 @@ class PreferencesVersion2Migration extends PreferencesMigrationStep with InfraLo
 
   @override
   Future<void> migrate() async {
-    // On standard Windows and macOS builds, TUN is not supported.
-    // Windows standard: requires admin privileges (Error 740, SmartScreen).
+    // Force system-proxy on platforms where TUN is problematic:
+    // - Android: TUN requires VPN permission dialog, fails on tablets, causes "failed to start background core"
+    // - Windows standard (no ENABLE_TUN): requires admin privileges (Error 740, SmartScreen)
+    // - macOS: Network Extension entitlements not available
     // Windows Pro (ENABLE_TUN=true): TUN is available, skip migration.
-    // macOS: Network Extension entitlements not available (no Apple Developer Program).
-    // Force service mode to system-proxy if it was set to vpn (TUN).
     const tunEnabled = bool.fromEnvironment('ENABLE_TUN');
-    if ((Platform.isWindows && !tunEnabled) || Platform.isMacOS) {
+    if (Platform.isAndroid || (Platform.isWindows && !tunEnabled) || Platform.isMacOS) {
       final serviceMode = sharedPreferences.getString("service-mode");
       if (serviceMode == "vpn") {
         loggy.debug("${Platform.operatingSystem}: changing service-mode from vpn (TUN) to system-proxy");

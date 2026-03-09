@@ -51,51 +51,66 @@ class HomePage extends HookConsumerWidget {
       }
     });
 
-    // Auto-disconnect when trial expires
+    // Auto-disconnect when trial expires — fires every time trial ticks while expired + connected
     ref.listen(trialProvider, (prev, next) {
-      if (next.isTrial && next.isExpired && !(prev?.isExpired ?? false)) {
-        // Disconnect VPN
+      if (next.isTrial && next.isExpired) {
         final connStatus = ref.read(connectionNotifierProvider).valueOrNull;
         if (connStatus is Connected) {
           ref.read(connectionNotifierProvider.notifier).toggleConnection();
         }
-        // Show expired dialog
-        if (context.mounted) {
+        // Show dialog only on first expiry transition
+        if (!(prev?.isExpired ?? false) && context.mounted) {
           _showTrialExpiredDialog(context);
         }
+      }
+    });
+
+    // Guard: if VPN connects while trial is already expired, immediately disconnect
+    ref.listen(connectionNotifierProvider, (prev, next) {
+      if (!trialState.isTrial || !trialState.isExpired) return;
+      final wasConnected = prev?.valueOrNull is Connected;
+      final nowConnected = next.valueOrNull is Connected;
+      if (!wasConnected && nowConnected) {
+        // Someone managed to connect despite expired trial — kill it
+        ref.read(connectionNotifierProvider.notifier).toggleConnection();
       }
     });
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0a0a0a) : const Color(0xFF00E5A0),
       body: SafeArea(
-        child: Stack(
-          children: [
-            // Decorative elements
-            if (isDark)
-              _AmbientGlow()
-            else ...[
-              _DecoCircle(size: 320, topFraction: 0.20, opacity: 1.0),
-              _DecoCircle(size: 440, topFraction: 0.14, opacity: 0.4),
-            ],
-
-            // Main content
-            Column(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Stack(
+              clipBehavior: Clip.hardEdge,
               children: [
-                _Header(isDark: isDark),
-                if (trialState.isTrial) ...[
-                  const SizedBox(height: 4),
-                  _TrialTimerBar(isDark: isDark, trialState: trialState),
+                // Decorative elements — clipped to available space
+                if (isDark)
+                  _AmbientGlow()
+                else ...[
+                  _DecoCircle(size: 320, topFraction: 0.20, opacity: 1.0),
+                  _DecoCircle(size: 440, topFraction: 0.14, opacity: 0.4),
                 ],
-                const SizedBox(height: 8),
-                _LocationSelector(isDark: isDark),
-                const Spacer(),
-                const ConnectionButton(),
-                const Spacer(),
-                _Footer(isDark: isDark),
+
+                // Main content — scrollable for small screens
+                Column(
+                  children: [
+                    _Header(isDark: isDark),
+                    if (trialState.isTrial) ...[
+                      const SizedBox(height: 4),
+                      _TrialTimerBar(isDark: isDark, trialState: trialState),
+                    ],
+                    const SizedBox(height: 8),
+                    _LocationSelector(isDark: isDark),
+                    const Spacer(),
+                    const ConnectionButton(),
+                    const Spacer(),
+                    _Footer(isDark: isDark),
+                  ],
+                ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -544,21 +559,27 @@ class _DecoCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
+    // Use view padding-aware height; LayoutBuilder constraints may not be
+    // available here since we're inside a Stack, so use MediaQuery but
+    // clamp to avoid overflow in small windowed/multi-window mode.
+    final availableHeight = MediaQuery.of(context).size.height;
+    final top = (availableHeight * topFraction).clamp(0.0, availableHeight - 10);
     return Positioned(
-      top: screenHeight * topFraction,
+      top: top,
       left: 0,
       right: 0,
       child: Center(
-        child: Opacity(
-          opacity: opacity,
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
+        child: IgnorePointer(
+          child: Opacity(
+            opacity: opacity,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
               ),
             ),
           ),

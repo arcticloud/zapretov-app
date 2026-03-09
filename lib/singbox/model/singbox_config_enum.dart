@@ -16,7 +16,7 @@ enum ServiceMode {
 
   final String key;
 
-  static ServiceMode get defaultMode => PlatformUtils.isDesktop ? systemProxy : tun;
+  static ServiceMode get defaultMode => systemProxy;
 
   /// Whether TUN mode is enabled via compile-time flag (--dart-define=ENABLE_TUN=true).
   /// Used for Windows Pro build that runs with admin privileges.
@@ -31,8 +31,8 @@ enum ServiceMode {
     } else if (Platform.isMacOS) {
       return [proxy, systemProxy];
     }
-    // mobile
-    return [proxy, tun];
+    // mobile — system-proxy only (TUN requires VPN permission, causes errors on tablets)
+    return [proxy, systemProxy];
   }
 
   // bool get isExperimental => switch (this) {

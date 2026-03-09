@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class SettingsPage extends HookConsumerWidget {
@@ -9,6 +10,7 @@ class SettingsPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
+    final isDebugMode = ref.watch(debugModeNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -30,29 +32,31 @@ class SettingsPage extends HookConsumerWidget {
             icon: Icons.info_rounded,
             namedLocation: context.namedLocation('about'),
           ),
-          const Divider(height: 1),
-          ExpansionTile(
-            leading: const Icon(Icons.build_rounded),
-            title: Text(t.pages.settings.advancedTitle),
-            childrenPadding: EdgeInsets.zero,
-            children: [
-              SettingsSection(
-                title: t.pages.settings.inbound.title,
-                icon: Icons.tune_rounded,
-                namedLocation: context.namedLocation('inboundOptions'),
-              ),
-              SettingsSection(
-                title: t.pages.settings.dns.title,
-                icon: Icons.dns_rounded,
-                namedLocation: context.namedLocation('dnsOptions'),
-              ),
-              SettingsSection(
-                title: t.pages.settings.routing.title,
-                icon: Icons.alt_route_rounded,
-                namedLocation: context.namedLocation('routeOptions'),
-              ),
-            ],
-          ),
+          if (isDebugMode) ...[
+            const Divider(height: 1),
+            ExpansionTile(
+              leading: const Icon(Icons.build_rounded),
+              title: Text(t.pages.settings.advancedTitle),
+              childrenPadding: EdgeInsets.zero,
+              children: [
+                SettingsSection(
+                  title: t.pages.settings.inbound.title,
+                  icon: Icons.tune_rounded,
+                  namedLocation: context.namedLocation('inboundOptions'),
+                ),
+                SettingsSection(
+                  title: t.pages.settings.dns.title,
+                  icon: Icons.dns_rounded,
+                  namedLocation: context.namedLocation('dnsOptions'),
+                ),
+                SettingsSection(
+                  title: t.pages.settings.routing.title,
+                  icon: Icons.alt_route_rounded,
+                  namedLocation: context.namedLocation('routeOptions'),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
