@@ -16,6 +16,7 @@ class PreferencesMigration with InfraLogger {
     final List<PreferencesMigrationStep> migrationSteps = [
       PreferencesVersion1Migration(sharedPreferences),
       PreferencesVersion2Migration(sharedPreferences),
+      PreferencesVersion3Migration(sharedPreferences),
     ];
 
     if (currentVersion == migrationSteps.length) {
@@ -128,6 +129,26 @@ class PreferencesVersion2Migration extends PreferencesMigrationStep with InfraLo
       final serviceMode = sharedPreferences.getString("service-mode");
       if (serviceMode == "vpn") {
         loggy.debug("${Platform.operatingSystem}: changing service-mode from vpn (TUN) to system-proxy");
+        await sharedPreferences.setString("service-mode", "system-proxy");
+      }
+    }
+  }
+}
+
+class PreferencesVersion3Migration extends PreferencesMigrationStep with InfraLogger {
+  PreferencesVersion3Migration(super.sharedPreferences);
+
+  @override
+  Future<void> migrate() async {
+    // Fix: on fresh install, service-mode was never written to SharedPreferences.
+    // Flutter used in-memory default "system-proxy", but Kotlin read SharedPreferences
+    // and got null → defaulted to "vpn" → started VPNService → crash.
+    // This migration ensures service-mode is explicitly written for all platforms.
+    const tunEnabled = bool.fromEnvironment('ENABLE_TUN');
+    if (Platform.isAndroid || (Platform.isWindows && !tunEnabled) || Platform.isMacOS) {
+      final serviceMode = sharedPreferences.getString("service-mode");
+      if (serviceMode == null || serviceMode == "vpn") {
+        loggy.debug("${Platform.operatingSystem}: setting service-mode to system-proxy (was: $serviceMode)");
         await sharedPreferences.setString("service-mode", "system-proxy");
       }
     }

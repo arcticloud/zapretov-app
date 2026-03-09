@@ -60,7 +60,7 @@ object Settings {
         set(value) = preferences.edit().putString(SettingsKey.ACTIVE_PROFILE_NAME, value).apply()
 
     var serviceMode: String
-        get() = preferences.getString(SettingsKey.SERVICE_MODE, ServiceMode.VPN)!!
+        get() = preferences.getString(SettingsKey.SERVICE_MODE, ServiceMode.NORMAL)!!
         set(value) = preferences.edit().putString(SettingsKey.SERVICE_MODE, value).apply()
 
     var configOptions: String
