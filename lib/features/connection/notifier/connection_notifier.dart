@@ -10,6 +10,7 @@ import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
+import 'package:hiddify/features/profile/notifier/profile_notifier.dart';
 import 'package:hiddify/hiddifycore/init_signal.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -140,6 +141,15 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     if (activeProfile == null) {
       loggy.info("no active profile, not connecting");
       return;
+    }
+    if (activeProfile is RemoteProfileEntity) {
+      try {
+        await ref
+            .read(updateProfileNotifierProvider(activeProfile.id).notifier)
+            .updateProfile(activeProfile);
+      } catch (e) {
+        loggy.warning("failed to refresh profile before connect, using cached: $e");
+      }
     }
     await _connectionRepo.connect(activeProfile, ref.read(Preferences.disableMemoryLimit)).mapLeft((
       ConnectionFailure err,
