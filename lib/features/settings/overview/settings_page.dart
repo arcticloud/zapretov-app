@@ -26,22 +26,24 @@ class SettingsPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final autoConnect = ref.watch(Preferences.autoConnect);
+    final autoCheckIp = ref.watch(Preferences.autoCheckIp);
+    final themeMode = ref.watch(themePreferencesProvider);
+
+    // Compute isDark from provider — avoids race with MaterialApp rebuild
+    final sysDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    final isDark = themeMode == AppThemeMode.dark ||
+        (themeMode == AppThemeMode.system && sysDark);
+
     final bg = isDark ? const Color(0xFF09090B) : const Color(0xFFF5F7FA);
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
     final subColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
     final btnBg = isDark ? const Color(0xFF18181B) : Colors.white;
     final btnBorder = isDark ? const Color(0xFF27272A) : const Color(0xFFE2E8F0);
 
-    final autoConnect = ref.watch(Preferences.autoConnect);
-    final autoCheckIp = ref.watch(Preferences.autoCheckIp);
-    final themeMode = ref.watch(themePreferencesProvider);
-
-    final themeIcon = themeMode == AppThemeMode.dark
-        ? Icons.dark_mode_outlined
-        : themeMode == AppThemeMode.light
-            ? Icons.light_mode_outlined
-            : Icons.brightness_auto_outlined;
+    final themeIcon = themeMode == AppThemeMode.light
+        ? Icons.light_mode_outlined
+        : Icons.dark_mode_outlined;
 
     return Scaffold(
       backgroundColor: bg,
@@ -133,9 +135,10 @@ class SettingsPage extends HookConsumerWidget {
                           style: TextStyle(fontSize: 13, color: subColor),
                         ),
                         onTap: () {
-                          final next = themeMode == AppThemeMode.dark
-                              ? AppThemeMode.light
-                              : AppThemeMode.dark;
+                          // system/dark → light; light → dark
+                          final next = themeMode == AppThemeMode.light
+                              ? AppThemeMode.dark
+                              : AppThemeMode.light;
                           ref.read(themePreferencesProvider.notifier).changeThemeMode(next);
                         },
                       ),

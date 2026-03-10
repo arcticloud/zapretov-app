@@ -17,6 +17,8 @@ class DnsOptionsPage extends HookConsumerWidget {
       backgroundColor: bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: textColor),
@@ -27,7 +29,11 @@ class DnsOptionsPage extends HookConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: textColor),
         ),
       ),
-      body: ListView(
+      body: Theme(
+        data: Theme.of(context).copyWith(
+          listTileTheme: const ListTileThemeData(tileColor: Colors.transparent),
+        ),
+        child: ListView(
         children: [
           ValuePreferenceWidget(
             value: ref.watch(ConfigOptions.remoteDnsAddress),
@@ -70,6 +76,7 @@ class DnsOptionsPage extends HookConsumerWidget {
           //   onChanged: ref.read(ConfigOptions.enableDnsRouting.notifier).update,
           // ),
         ],
+        ),
       ),
     );
   }

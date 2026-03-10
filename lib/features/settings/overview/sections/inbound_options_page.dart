@@ -21,6 +21,8 @@ class InboundOptionsPage extends HookConsumerWidget {
       backgroundColor: bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: textColor),
@@ -31,7 +33,11 @@ class InboundOptionsPage extends HookConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: textColor),
         ),
       ),
-      body: ListView(
+      body: Theme(
+        data: Theme.of(context).copyWith(
+          listTileTheme: const ListTileThemeData(tileColor: Colors.transparent),
+        ),
+        child: ListView(
         children: [
           ChoicePreferenceWidget(
             selected: ref.watch(ConfigOptions.serviceMode),
@@ -111,6 +117,7 @@ class InboundOptionsPage extends HookConsumerWidget {
             },
           ),
         ],
+        ),
       ),
     );
   }
