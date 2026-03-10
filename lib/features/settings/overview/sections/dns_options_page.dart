@@ -10,8 +10,23 @@ class DnsOptionsPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF09090B) : const Color(0xFFF5F7FA);
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
     return Scaffold(
-      appBar: AppBar(title: Text(t.pages.settings.dns.title)),
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: textColor),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          t.pages.settings.dns.title,
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: textColor),
+        ),
+      ),
       body: ListView(
         children: [
           ValuePreferenceWidget(

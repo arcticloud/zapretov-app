@@ -29,12 +29,19 @@ class SettingsPage extends HookConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? const Color(0xFF09090B) : const Color(0xFFF5F7FA);
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
     final btnBg = isDark ? const Color(0xFF18181B) : Colors.white;
     final btnBorder = isDark ? const Color(0xFF27272A) : const Color(0xFFE2E8F0);
 
     final autoConnect = ref.watch(Preferences.autoConnect);
     final autoCheckIp = ref.watch(Preferences.autoCheckIp);
     final themeMode = ref.watch(themePreferencesProvider);
+
+    final themeIcon = themeMode == AppThemeMode.dark
+        ? Icons.dark_mode_outlined
+        : themeMode == AppThemeMode.light
+            ? Icons.light_mode_outlined
+            : Icons.brightness_auto_outlined;
 
     return Scaffold(
       backgroundColor: bg,
@@ -87,6 +94,7 @@ class SettingsPage extends HookConsumerWidget {
                     children: [
                       _ToggleRow(
                         isDark: isDark,
+                        icon: Icons.sync_rounded,
                         label: 'Автоподключение',
                         value: autoConnect,
                         onChanged: (v) => ref.read(Preferences.autoConnect.notifier).update(v),
@@ -94,6 +102,7 @@ class SettingsPage extends HookConsumerWidget {
                       _Divider(isDark: isDark),
                       _ToggleRow(
                         isDark: isDark,
+                        icon: Icons.location_searching_rounded,
                         label: 'Проверка IP',
                         value: autoCheckIp,
                         onChanged: (v) => ref.read(Preferences.autoCheckIp.notifier).update(v),
@@ -101,17 +110,10 @@ class SettingsPage extends HookConsumerWidget {
                       _Divider(isDark: isDark),
                       _NavRow(
                         isDark: isDark,
+                        icon: Icons.tune_rounded,
                         label: 'Режим сервиса',
                         onTap: () => context.go(context.namedLocation('inboundOptions')),
                       ),
-                      if (Platform.isAndroid) ...[
-                        _Divider(isDark: isDark),
-                        _NavRow(
-                          isDark: isDark,
-                          label: 'VPN по приложениям',
-                          onTap: () => context.go(context.namedLocation('general')),
-                        ),
-                      ],
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -124,13 +126,11 @@ class SettingsPage extends HookConsumerWidget {
                     children: [
                       _NavRow(
                         isDark: isDark,
+                        icon: themeIcon,
                         label: 'Тема',
                         trailing: Text(
                           _themeName(themeMode),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8),
-                          ),
+                          style: TextStyle(fontSize: 13, color: subColor),
                         ),
                         onTap: () {
                           final next = themeMode == AppThemeMode.dark
@@ -139,38 +139,46 @@ class SettingsPage extends HookConsumerWidget {
                           ref.read(themePreferencesProvider.notifier).changeThemeMode(next);
                         },
                       ),
-                      _Divider(isDark: isDark),
-                      _NavRow(
-                        isDark: isDark,
-                        label: 'Язык',
-                        onTap: () => context.go(context.namedLocation('general')),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
 
-                  // ── Advanced section ──
-                  _SectionLabel(label: 'Дополнительно', isDark: isDark),
-                  const SizedBox(height: 8),
+                  // ── Advanced section (accordion) ──
                   _SettingsCard(
                     isDark: isDark,
                     children: [
-                      _NavRow(
-                        isDark: isDark,
-                        label: 'DNS',
-                        onTap: () => context.go(context.namedLocation('dnsOptions')),
-                      ),
-                      _Divider(isDark: isDark),
-                      _NavRow(
-                        isDark: isDark,
-                        label: 'Маршруты',
-                        onTap: () => context.go(context.namedLocation('routeOptions')),
-                      ),
-                      _Divider(isDark: isDark),
-                      _NavRow(
-                        isDark: isDark,
-                        label: 'TLS / Inbound',
-                        onTap: () => context.go(context.namedLocation('inboundOptions')),
+                      Theme(
+                        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          leading: Icon(Icons.build_outlined, size: 20, color: subColor),
+                          title: Text(
+                            'Дополнительно',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: isDark ? Colors.white : const Color(0xFF1E293B),
+                            ),
+                          ),
+                          iconColor: subColor,
+                          collapsedIconColor: subColor,
+                          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          childrenPadding: EdgeInsets.zero,
+                          children: [
+                            _Divider(isDark: isDark),
+                            _NavRow(
+                              isDark: isDark,
+                              icon: Icons.dns_rounded,
+                              label: 'DNS',
+                              onTap: () => context.go(context.namedLocation('dnsOptions')),
+                            ),
+                            _Divider(isDark: isDark),
+                            _NavRow(
+                              isDark: isDark,
+                              icon: Icons.alt_route_rounded,
+                              label: 'Маршруты',
+                              onTap: () => context.go(context.namedLocation('routeOptions')),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -184,20 +192,23 @@ class SettingsPage extends HookConsumerWidget {
                     children: [
                       _NavRow(
                         isDark: isDark,
+                        icon: Icons.send_outlined,
                         label: 'Telegram канал',
                         onTap: () => UriUtils.tryLaunch(Uri.parse('https://t.me/relokant_net')),
                       ),
                       _Divider(isDark: isDark),
                       _NavRow(
                         isDark: isDark,
+                        icon: Icons.description_outlined,
                         label: 'Условия использования',
-                        onTap: () => context.go(context.namedLocation('about')),
+                        onTap: () => UriUtils.tryLaunch(Uri.parse('https://relokant.net/terms.html')),
                       ),
                       _Divider(isDark: isDark),
                       _NavRow(
                         isDark: isDark,
+                        icon: Icons.shield_outlined,
                         label: 'Конфиденциальность',
-                        onTap: () => context.go(context.namedLocation('about')),
+                        onTap: () => UriUtils.tryLaunch(Uri.parse('https://relokant.net/privacy.html')),
                       ),
                       _Divider(isDark: isDark),
                       _VersionRow(isDark: isDark),
@@ -364,11 +375,13 @@ class _Divider extends StatelessWidget {
 class _NavRow extends StatelessWidget {
   const _NavRow({
     required this.isDark,
+    required this.icon,
     required this.label,
     required this.onTap,
     this.trailing,
   });
   final bool isDark;
+  final IconData icon;
   final String label;
   final VoidCallback onTap;
   final Widget? trailing;
@@ -376,26 +389,26 @@ class _NavRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
-    final subColor = isDark ? const Color(0xFF52525B) : const Color(0xFFCBD5E1);
+    final iconColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
+    final chevronColor = isDark ? const Color(0xFF52525B) : const Color(0xFFCBD5E1);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         child: Row(
           children: [
+            Icon(icon, size: 20, color: iconColor),
+            const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(fontSize: 15, color: textColor),
-              ),
+              child: Text(label, style: TextStyle(fontSize: 15, color: textColor)),
             ),
             if (trailing != null) ...[
               trailing!,
               const SizedBox(width: 4),
             ],
-            Icon(Icons.chevron_right_rounded, size: 18, color: subColor),
+            Icon(Icons.chevron_right_rounded, size: 18, color: chevronColor),
           ],
         ),
       ),
@@ -406,11 +419,13 @@ class _NavRow extends StatelessWidget {
 class _ToggleRow extends StatelessWidget {
   const _ToggleRow({
     required this.isDark,
+    required this.icon,
     required this.label,
     required this.value,
     required this.onChanged,
   });
   final bool isDark;
+  final IconData icon;
   final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
@@ -418,11 +433,14 @@ class _ToggleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final iconColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
+          Icon(icon, size: 20, color: iconColor),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(label, style: TextStyle(fontSize: 15, color: textColor)),
           ),
@@ -449,9 +467,15 @@ class _VersionRow extends StatelessWidget {
       builder: (context, snapshot) {
         final version = snapshot.data?.version ?? '–';
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           child: Row(
             children: [
+              Icon(
+                Icons.info_outline,
+                size: 20,
+                color: isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Версия',

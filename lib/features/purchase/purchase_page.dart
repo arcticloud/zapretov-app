@@ -70,9 +70,7 @@ class PurchasePage extends ConsumerWidget {
               ),
             ),
             Expanded(
-              child: state.isLoading
-                  ? const Center(child: CircularProgressIndicator(color: _green))
-                  : _buildContent(context, state, notifier, isDark, textColor, subColor),
+              child: _buildContent(context, state, notifier, isDark, textColor, subColor),
             ),
           ],
         ),
