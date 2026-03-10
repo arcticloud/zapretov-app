@@ -13,6 +13,7 @@ class DnsOptionsPage extends HookConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? const Color(0xFF09090B) : const Color(0xFFF5F7FA);
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final iconColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
     return Scaffold(
       backgroundColor: bg,
       appBar: AppBar(
@@ -31,7 +32,16 @@ class DnsOptionsPage extends HookConsumerWidget {
       ),
       body: Theme(
         data: Theme.of(context).copyWith(
-          listTileTheme: const ListTileThemeData(tileColor: Colors.transparent),
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+            onSurface: textColor,
+            onSurfaceVariant: iconColor,
+            surface: bg,
+          ),
+          listTileTheme: ListTileThemeData(
+            tileColor: Colors.transparent,
+            iconColor: iconColor,
+            textColor: textColor,
+          ),
         ),
         child: ListView(
         children: [
