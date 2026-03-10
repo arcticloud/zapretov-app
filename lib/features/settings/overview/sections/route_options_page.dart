@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/region.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
+import 'package:hiddify/core/theme/app_theme_mode.dart';
+import 'package:hiddify/core/theme/theme_preferences.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/features/per_app_proxy/model/per_app_proxy_mode.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_notifier.dart';
@@ -18,7 +20,9 @@ class RouteOptionsPage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
     final perAppProxy = ref.watch(Preferences.perAppProxyMode).enabled;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeMode = ref.watch(themePreferencesProvider);
+    final sysDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    final isDark = themeMode == AppThemeMode.dark || (themeMode == AppThemeMode.system && sysDark);
     final bg = isDark ? const Color(0xFF09090B) : const Color(0xFFF5F7FA);
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
     final iconColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);

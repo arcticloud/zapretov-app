@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/core/preferences/general_preferences.dart';
+import 'package:hiddify/core/theme/app_theme_mode.dart';
+import 'package:hiddify/core/theme/theme_preferences.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/settings/widget/preference_tile.dart';
 import 'package:hiddify/singbox/model/singbox_config_enum.dart';
@@ -10,7 +13,9 @@ class DnsOptionsPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeMode = ref.watch(themePreferencesProvider);
+    final sysDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    final isDark = themeMode == AppThemeMode.dark || (themeMode == AppThemeMode.system && sysDark);
     final bg = isDark ? const Color(0xFF09090B) : const Color(0xFFF5F7FA);
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
     final iconColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
