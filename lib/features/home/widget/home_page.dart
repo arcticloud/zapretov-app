@@ -92,6 +92,9 @@ class HomePage extends HookConsumerWidget {
                   _DecoCircle(size: 440, topFraction: 0.14, opacity: 0.4),
                 ],
 
+                // Mesh gradient — fades in when connected
+                _ConnectedMeshGradient(isConnected: isConnected, isDark: isDark),
+
                 // Main content — scrollable for small screens
                 Column(
                   children: [
@@ -823,6 +826,47 @@ class _TrialTimerBar extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Connected mesh gradient ──────────────────────────────
+
+class _ConnectedMeshGradient extends StatelessWidget {
+  const _ConnectedMeshGradient({required this.isConnected, required this.isDark});
+  final bool isConnected;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeOut,
+          opacity: isConnected ? 1.0 : 0.0,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: isDark ? const Alignment(-0.8, -0.8) : Alignment.topCenter,
+                radius: isDark ? 1.2 : 1.4,
+                colors: isDark
+                    ? const [
+                        Color.fromRGBO(0, 229, 160, 0.10),
+                        Color.fromRGBO(0, 200, 255, 0.06),
+                        Colors.transparent,
+                      ]
+                    : const [
+                        Color.fromRGBO(0, 229, 160, 0.25),
+                        Color.fromRGBO(0, 200, 160, 0.10),
+                        Colors.transparent,
+                      ],
+                stops: isDark ? const [0.0, 0.4, 1.0] : const [0.0, 0.5, 1.0],
+              ),
+            ),
+          ),
         ),
       ),
     );

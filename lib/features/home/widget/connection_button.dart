@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:hiddify/core/localization/translations.dart';
@@ -170,38 +171,82 @@ class _RelokantConnectionButton extends StatefulWidget {
 }
 
 class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
+    with TickerProviderStateMixin {
+  late final AnimationController _morphController;
+  late final AnimationController _rotateController;
+  late final AnimationController _pulseController;
+  late final Animation<BorderRadius?> _morphAnimation;
+  late final Animation<double> _pulseAnimation;
+
+  // Blob shape A (idle start)
+  static const _shapeA = BorderRadius.only(
+    topLeft: Radius.elliptical(96, 96),
+    topRight: Radius.elliptical(64, 48),
+    bottomRight: Radius.elliptical(48, 112),
+    bottomLeft: Radius.elliptical(112, 64),
+  );
+
+  // Blob shape B (idle end)
+  static const _shapeB = BorderRadius.only(
+    topLeft: Radius.elliptical(48, 80),
+    topRight: Radius.elliptical(96, 96),
+    bottomRight: Radius.elliptical(112, 48),
+    bottomLeft: Radius.elliptical(64, 96),
+  );
 
   @override
   void initState() {
     super.initState();
+
+    // Morph: 6s loop A ↔ B
+    _morphController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat(reverse: true);
+    _morphAnimation = BorderRadiusTween(begin: _shapeA, end: _shapeB)
+        .animate(CurvedAnimation(parent: _morphController, curve: Curves.easeInOut));
+
+    // Rotate: spins while connecting
+    _rotateController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+    if (widget.isSwitching) _rotateController.repeat();
+
+    // Pulse: expands ring when connected
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2500),
     );
     _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
     );
-    if (widget.isConnected) {
-      _pulseController.repeat();
-    }
+    if (widget.isConnected) _pulseController.repeat();
   }
 
   @override
   void didUpdateWidget(_RelokantConnectionButton oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.isSwitching && !_rotateController.isAnimating) {
+      _rotateController.repeat();
+    } else if (!widget.isSwitching && _rotateController.isAnimating) {
+      _rotateController
+        ..stop()
+        ..reset();
+    }
     if (widget.isConnected && !_pulseController.isAnimating) {
       _pulseController.repeat();
     } else if (!widget.isConnected && _pulseController.isAnimating) {
-      _pulseController.stop();
-      _pulseController.reset();
+      _pulseController
+        ..stop()
+        ..reset();
     }
   }
 
   @override
   void dispose() {
+    _morphController.dispose();
+    _rotateController.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -210,6 +255,8 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isConnected = widget.isConnected;
+    final isSwitching = widget.isSwitching;
+    final isBlocked = widget.isTrialBlocked;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -220,88 +267,90 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
             width: 200,
             height: 200,
             child: AnimatedBuilder(
-              animation: _pulseAnimation,
-              builder: (context, child) {
+              animation: Listenable.merge([_morphController, _pulseController]),
+              builder: (context, _) {
+                final borderRadius = _morphAnimation.value ?? _shapeA;
                 final pulseValue = _pulseAnimation.value;
-                // Outer ring expands from 12px to 26px inset
-                final ringInset = isConnected ? 12.0 + (14.0 * pulseValue) : 12.0;
-                final ringOpacity = isConnected ? 1.0 - (0.85 * pulseValue) : 0.0;
 
                 return Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Pulse ring (only when connected)
+                    // Pulse ring — blob-shaped, expands outward
                     if (isConnected)
                       Positioned.fill(
-                        child: Container(
-                          margin: EdgeInsets.all(20 - ringInset + 12),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isDark
-                                  ? Color.fromRGBO(0, 229, 160, 0.12 * ringOpacity)
-                                  : Color.fromRGBO(0, 40, 25, 0.15 * ringOpacity),
-                              width: 1.5,
+                        child: Opacity(
+                          opacity: (1.0 - pulseValue).clamp(0.0, 1.0),
+                          child: Container(
+                            margin: EdgeInsets.all(18.0 + 18.0 * pulseValue),
+                            decoration: BoxDecoration(
+                              borderRadius: borderRadius,
+                              border: Border.all(
+                                color: isDark
+                                    ? const Color(0xFF00E5A0)
+                                    : const Color(0xFF00875A),
+                                width: 1.5,
+                              ),
                             ),
                           ),
                         ),
                       ),
 
-                    // Outer ring (static)
+                    // Outer ring — morphs with blob
                     Container(
                       width: 184,
                       height: 184,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        borderRadius: borderRadius,
                         border: Border.all(
-                          color: isDark
-                              ? const Color.fromRGBO(0, 229, 160, 0.06)
-                              : const Color.fromRGBO(0, 40, 25, 0.06),
+                          color: isBlocked
+                              ? (isDark
+                                  ? const Color.fromRGBO(255, 255, 255, 0.04)
+                                  : const Color.fromRGBO(0, 0, 0, 0.04))
+                              : isConnected
+                                  ? (isDark
+                                      ? const Color.fromRGBO(0, 229, 160, 0.15)
+                                      : const Color.fromRGBO(0, 135, 90, 0.12))
+                                  : (isDark
+                                      ? const Color.fromRGBO(255, 59, 48, 0.12)
+                                      : const Color.fromRGBO(255, 59, 48, 0.10)),
                           width: 1.5,
                         ),
                       ),
                     ),
 
-                    // Main button
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeOut,
-                      width: 160,
-                      height: 160,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _buttonColor(isDark, isConnected),
-                        border: Border.all(
-                          color: _borderColor(isDark, isConnected),
-                          width: isConnected ? 2.5 : 2.0,
+                    // Main blob button — rotates while connecting
+                    RotationTransition(
+                      turns: _rotateController,
+                      child: Container(
+                        width: 160,
+                        height: 160,
+                        decoration: BoxDecoration(
+                          borderRadius: borderRadius,
+                          color: _buttonColor(isDark, isConnected, isBlocked, isSwitching),
+                          border: Border.all(
+                            color: _borderColor(isDark, isConnected, isBlocked, isSwitching),
+                            width: 1.5,
+                          ),
+                          boxShadow: _boxShadow(isDark, isConnected, isBlocked),
                         ),
-                        boxShadow: isConnected
-                            ? [
-                                BoxShadow(
-                                  color: isDark
-                                      ? const Color.fromRGBO(0, 229, 160, 0.12)
-                                      : const Color.fromRGBO(0, 60, 35, 0.25),
-                                  blurRadius: isDark ? 60 : 40,
+                        // Glassmorphism
+                        child: ClipRRect(
+                          borderRadius: borderRadius,
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                            child: Center(
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 300),
+                                child: Icon(
+                                  _iconData(isConnected, isSwitching),
+                                  key: ValueKey('${isConnected}_$isSwitching'),
+                                  size: 52,
+                                  color: _iconColor(isDark, isConnected, isBlocked, isSwitching),
                                 ),
-                                BoxShadow(
-                                  color: isDark
-                                      ? const Color.fromRGBO(0, 229, 160, 0.04)
-                                      : const Color.fromRGBO(0, 60, 35, 0.1),
-                                  blurRadius: isDark ? 120 : 80,
-                                ),
-                              ]
-                            : [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.06),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                      ),
-                      child: Icon(
-                        isConnected ? Icons.check_rounded : Icons.power_settings_new_rounded,
-                        size: 52,
-                        color: _iconColor(isDark, isConnected),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -324,50 +373,98 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
     );
   }
 
-  Color _buttonColor(bool isDark, bool isConnected) {
-    if (widget.isTrialBlocked) {
+  Color _buttonColor(bool isDark, bool isConnected, bool isBlocked, bool isSwitching) {
+    if (isBlocked) {
       return isDark
           ? const Color.fromRGBO(255, 255, 255, 0.04)
           : const Color.fromRGBO(0, 0, 0, 0.06);
     }
-    if (isDark) {
-      return isConnected
-          ? const Color.fromRGBO(0, 229, 160, 0.15)
-          : const Color.fromRGBO(0, 229, 160, 0.06);
-    } else {
-      return isConnected
-          ? const Color.fromRGBO(0, 40, 25, 0.22)
-          : const Color.fromRGBO(0, 40, 25, 0.10);
+    if (isConnected) {
+      return isDark
+          ? const Color.fromRGBO(0, 229, 160, 0.12)
+          : const Color.fromRGBO(0, 229, 160, 0.15);
     }
+    if (isSwitching) {
+      return isDark
+          ? const Color.fromRGBO(0, 229, 160, 0.08)
+          : const Color.fromRGBO(0, 229, 160, 0.10);
+    }
+    // Disconnected → red
+    return isDark
+        ? const Color.fromRGBO(255, 59, 48, 0.08)
+        : const Color.fromRGBO(255, 59, 48, 0.06);
   }
 
-  Color _borderColor(bool isDark, bool isConnected) {
-    if (isDark) {
-      return isConnected
-          ? const Color.fromRGBO(0, 229, 160, 0.5)
-          : const Color.fromRGBO(0, 229, 160, 0.2);
-    } else {
-      return isConnected
-          ? const Color.fromRGBO(0, 40, 25, 0.3)
-          : const Color.fromRGBO(0, 40, 25, 0.08);
+  Color _borderColor(bool isDark, bool isConnected, bool isBlocked, bool isSwitching) {
+    if (isBlocked) {
+      return isDark
+          ? const Color.fromRGBO(255, 255, 255, 0.08)
+          : const Color.fromRGBO(0, 0, 0, 0.08);
     }
+    if (isConnected) {
+      return isDark
+          ? const Color.fromRGBO(0, 229, 160, 0.50)
+          : const Color.fromRGBO(0, 229, 160, 0.60);
+    }
+    if (isSwitching) {
+      return isDark
+          ? const Color.fromRGBO(0, 229, 160, 0.30)
+          : const Color.fromRGBO(0, 229, 160, 0.40);
+    }
+    // Disconnected → red
+    return isDark
+        ? const Color.fromRGBO(255, 59, 48, 0.25)
+        : const Color.fromRGBO(255, 59, 48, 0.30);
   }
 
-  Color _iconColor(bool isDark, bool isConnected) {
-    if (widget.isTrialBlocked) {
+  Color _iconColor(bool isDark, bool isConnected, bool isBlocked, bool isSwitching) {
+    if (isBlocked) {
       return isDark
           ? const Color.fromRGBO(255, 255, 255, 0.15)
           : const Color.fromRGBO(0, 0, 0, 0.15);
     }
-    if (isDark) {
-      return isConnected
-          ? const Color(0xFF00E5A0)
-          : const Color.fromRGBO(0, 229, 160, 0.4);
-    } else {
-      return isConnected
-          ? const Color.fromRGBO(0, 30, 18, 0.75)
-          : const Color.fromRGBO(0, 40, 25, 0.3);
+    if (isConnected) return const Color(0xFF00E5A0);
+    if (isSwitching) {
+      return isDark
+          ? const Color.fromRGBO(0, 229, 160, 0.60)
+          : const Color.fromRGBO(0, 229, 160, 0.70);
     }
+    // Disconnected → red at 50%
+    return isDark
+        ? const Color.fromRGBO(255, 59, 48, 0.50)
+        : const Color.fromRGBO(255, 59, 48, 0.60);
+  }
+
+  List<BoxShadow> _boxShadow(bool isDark, bool isConnected, bool isBlocked) {
+    if (isBlocked || !isConnected) {
+      return [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.06),
+          blurRadius: 20,
+          offset: const Offset(0, 4),
+        ),
+      ];
+    }
+    return [
+      BoxShadow(
+        color: isDark
+            ? const Color.fromRGBO(0, 229, 160, 0.12)
+            : const Color.fromRGBO(0, 60, 35, 0.25),
+        blurRadius: isDark ? 60 : 40,
+      ),
+      BoxShadow(
+        color: isDark
+            ? const Color.fromRGBO(0, 229, 160, 0.04)
+            : const Color.fromRGBO(0, 60, 35, 0.10),
+        blurRadius: isDark ? 120 : 80,
+      ),
+    ];
+  }
+
+  IconData _iconData(bool isConnected, bool isSwitching) {
+    if (isSwitching) return Icons.refresh_rounded;
+    if (isConnected) return Icons.check_rounded;
+    return Icons.power_settings_new_rounded;
   }
 
   Color _statusTextColor(bool isDark, bool isConnected) {
@@ -377,7 +474,7 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
           : const Color.fromRGBO(255, 255, 255, 0.35);
     } else {
       return isConnected
-          ? const Color.fromRGBO(0, 0, 0, 0.7)
+          ? const Color.fromRGBO(0, 0, 0, 0.70)
           : const Color.fromRGBO(0, 0, 0, 0.35);
     }
   }
