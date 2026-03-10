@@ -76,12 +76,14 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     final haptic = ref.read(hapticServiceProvider.notifier);
     if (state case AsyncError()) {
       await haptic.lightImpact();
+      state = const AsyncData(Connecting()); // optimistic: show connecting immediately
       await _connect();
     } else if (state case AsyncData(:final value)) {
       switch (value) {
         case Disconnected():
           await haptic.lightImpact();
           await ref.read(Preferences.startedByUser.notifier).update(true);
+          state = const AsyncData(Connecting()); // optimistic: prevent double-tap during permission dialogs
           await _connect();
         case Connected():
           // default:
