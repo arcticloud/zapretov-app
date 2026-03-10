@@ -21,6 +21,7 @@ import 'package:hiddify/core/router/dialog/widgets/setting_text_dialog.dart';
 import 'package:hiddify/core/router/dialog/widgets/sort_profiles_dialog.dart';
 import 'package:hiddify/core/router/dialog/widgets/unknown_domains_warning_dialog.dart';
 import 'package:hiddify/core/router/dialog/widgets/warp_license_dialog.dart';
+import 'package:hiddify/core/router/dialog/widgets/trial_expired_dialog.dart';
 import 'package:hiddify/core/router/dialog/widgets/window_closing_dialog.dart';
 import 'package:hiddify/core/router/go_router/go_router_notifier.dart';
 import 'package:hiddify/features/app_update/model/remote_version_entity.dart';
@@ -240,5 +241,9 @@ class DialogNotifier extends _$DialogNotifier {
 
   Future<void> showCustomAlertFromErr(({String type, String? message}) err) async {
     return await _show<void>(CustomAlertDialog.fromErr(err));
+  }
+
+  Future<void> showTrialExpired() async {
+    return await _show<void>(const TrialExpiredDialog());
   }
 }

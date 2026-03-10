@@ -126,12 +126,24 @@ class UpdateProfileNotifier extends _$UpdateProfileNotifier with AppLogger {
         case AsyncData(value: final _?):
           notification.showSuccessToast(t.pages.profiles.msg.update.success);
         case AsyncError(:final error):
-          ref
-              .read(dialogNotifierProvider.notifier)
-              .showCustomAlertFromErr(t.presentError(error, action: t.pages.profiles.msg.update.failure));
+          if (_isTrialExpired(error)) {
+            ref.read(dialogNotifierProvider.notifier).showTrialExpired();
+          } else {
+            ref
+                .read(dialogNotifierProvider.notifier)
+                .showCustomAlertFromErr(t.presentError(error, action: t.pages.profiles.msg.update.failure));
+          }
       }
     });
     return const AsyncData(null);
+  }
+
+  static bool _isTrialExpired(Object error) {
+    if (error is ProfileUnexpectedFailure) {
+      final cause = error.error;
+      return cause is DioException && cause.response?.statusCode == 403;
+    }
+    return false;
   }
 
   ProfileRepository get _profilesRepo => ref.read(profileRepositoryProvider).requireValue;
