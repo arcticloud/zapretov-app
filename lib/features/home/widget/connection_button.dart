@@ -363,11 +363,12 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
         AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 300),
           style: TextStyle(
-            fontSize: 15,
-            fontWeight: isConnected ? FontWeight.w700 : FontWeight.w600,
-            color: _statusTextColor(isDark, isConnected),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 2.0,
+            color: _statusTextColor(isDark, isConnected, isSwitching),
           ),
-          child: Text(widget.label),
+          child: Text(widget.label.toUpperCase()),
         ),
       ],
     );
@@ -467,15 +468,20 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
     return Icons.power_settings_new_rounded;
   }
 
-  Color _statusTextColor(bool isDark, bool isConnected) {
-    if (isDark) {
-      return isConnected
+  Color _statusTextColor(bool isDark, bool isConnected, bool isSwitching) {
+    if (isConnected) {
+      return isDark
           ? const Color(0xFF00E5A0)
-          : const Color.fromRGBO(255, 255, 255, 0.35);
-    } else {
-      return isConnected
-          ? const Color.fromRGBO(0, 0, 0, 0.70)
-          : const Color.fromRGBO(0, 0, 0, 0.35);
+          : const Color.fromRGBO(0, 80, 45, 0.9);
     }
+    if (isSwitching) {
+      return isDark
+          ? const Color.fromRGBO(0, 229, 160, 0.7)
+          : const Color.fromRGBO(0, 120, 70, 0.7);
+    }
+    // Disconnected → red tint
+    return isDark
+        ? const Color.fromRGBO(255, 80, 80, 0.6)
+        : const Color.fromRGBO(220, 38, 38, 0.6);
   }
 }

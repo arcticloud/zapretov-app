@@ -77,20 +77,15 @@ class HomePage extends HookConsumerWidget {
     });
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0a0a0a) : const Color(0xFF00E5A0),
+      backgroundColor: isDark ? const Color(0xFF09090B) : const Color(0xFFF5F7FA),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             return Stack(
               clipBehavior: Clip.hardEdge,
               children: [
-                // Decorative elements — clipped to available space
-                if (isDark)
-                  _AmbientGlow()
-                else ...[
-                  _DecoCircle(size: 320, topFraction: 0.20, opacity: 1.0),
-                  _DecoCircle(size: 440, topFraction: 0.14, opacity: 0.4),
-                ],
+                // Ambient glow — dark theme only
+                if (isDark) _AmbientGlow(),
 
                 // Mesh gradient — fades in when connected
                 _ConnectedMeshGradient(isConnected: isConnected, isDark: isDark),
@@ -143,14 +138,22 @@ class _Header extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(
-            height: 22,
-            width: 22,
-            child: Assets.images.logo.svg(
-              fit: BoxFit.contain,
-              colorFilter: ColorFilter.mode(
-                isDark ? const Color(0xFF00E5A0) : const Color(0xFF0a0a0a),
-                BlendMode.srcIn,
+          // Logo icon — 28×28 green rounded square
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: const Color(0xFF00E5A0),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Assets.images.logo.svg(
+                fit: BoxFit.contain,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF0a0a0a),
+                  BlendMode.srcIn,
+                ),
               ),
             ),
           ),
@@ -158,31 +161,25 @@ class _Header extends ConsumerWidget {
           Text(
             'Relokant',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.w700,
-              height: 22 / 20,
-              leadingDistribution: TextLeadingDistribution.even,
-              color: Colors.white,
+              letterSpacing: -0.3,
+              color: isDark ? Colors.white : const Color(0xFF1E293B),
             ),
           ),
-          const SizedBox(width: 5),
+          const SizedBox(width: 4),
           Text(
             'VPN',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
-              height: 22 / 14,
-              leadingDistribution: TextLeadingDistribution.even,
-              letterSpacing: 1.5,
-              color: isDark
-                  ? const Color(0xFF00E5A0)
-                  : const Color(0xFF0a0a0a),
+              letterSpacing: 0.5,
+              color: isDark ? const Color(0xFF00E5A0) : const Color(0xFF00B880),
             ),
           ),
           const Spacer(),
           GestureDetector(
             onTap: () {
-              // Toggle between light and dark
               final current = themeMode;
               final next = (current == AppThemeMode.dark || current == AppThemeMode.black)
                   ? AppThemeMode.light
@@ -190,20 +187,22 @@ class _Header extends ConsumerWidget {
               ref.read(themePreferencesProvider.notifier).changeThemeMode(next);
             },
             child: Container(
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.black.withValues(alpha: 0.06),
+                color: isDark ? const Color(0xFF18181B) : Colors.white,
+                border: isDark
+                    ? Border.all(color: const Color(0xFF27272A))
+                    : null,
+                boxShadow: isDark
+                    ? null
+                    : [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2))],
               ),
               child: Icon(
-                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                size: 20,
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.35)
-                    : Colors.black.withValues(alpha: 0.4),
+                isDark ? Icons.wb_sunny_outlined : Icons.dark_mode_outlined,
+                size: 18,
+                color: isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8),
               ),
             ),
           ),
@@ -224,45 +223,33 @@ class _LocationSelector extends ConsumerWidget {
     final activeProxy = ref.watch(
       activeProxyNotifierProvider.select((value) => value.valueOrNull),
     );
-    final connectionStatus = ref.watch(connectionNotifierProvider);
-    final isConnected = connectionStatus.valueOrNull is Connected;
     final countryCode = _detectCountryCode(activeProxy);
     final locationName = _locationName(activeProxy, countryCode);
-    final subtitle = isConnected ? 'Нажмите для выбора' : 'Подключитесь и выберите сервер';
 
     return GestureDetector(
-      onTap: () {
-        if (isConnected) {
-          _showProxyPicker(context);
-        } else {
-          // Connect AND open picker so user can switch server immediately
-          ref.read(connectionNotifierProvider.notifier).toggleConnection();
-          _showProxyPicker(context);
-        }
-      },
+      onTap: () => _showProxyPicker(context),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.04)
-              : Colors.black.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(20),
+          color: isDark ? const Color(0xFF18181B).withValues(alpha: 0.6) : Colors.white,
           border: isDark
-              ? Border.all(color: Colors.white.withValues(alpha: 0.06))
+              ? Border.all(color: const Color(0xFF3F3F46).withValues(alpha: 0.6))
               : null,
+          boxShadow: isDark
+              ? null
+              : [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))],
         ),
         child: Row(
           children: [
-            // Flag
+            // Flag — 40×40 rounded square
             Container(
-              width: 28,
-              height: 18,
+              width: 40,
+              height: 40,
               clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: CircleFlag(countryCode.toLowerCase(), size: 28),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+              child: CircleFlag(countryCode.toLowerCase(), size: 40),
             ),
             const SizedBox(width: 12),
             // Server info
@@ -273,19 +260,17 @@ class _LocationSelector extends ConsumerWidget {
                   Text(
                     locationName,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : const Color(0xFF0a0a0a),
+                      color: isDark ? Colors.white : const Color(0xFF1E293B),
                     ),
                   ),
-                  const SizedBox(height: 1),
+                  const SizedBox(height: 2),
                   Text(
-                    subtitle,
+                    'авто',
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.3)
-                          : Colors.black.withValues(alpha: 0.4),
+                      color: isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8),
                     ),
                   ),
                 ],
@@ -295,9 +280,7 @@ class _LocationSelector extends ConsumerWidget {
             Icon(
               Icons.chevron_right_rounded,
               size: 20,
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.2),
+              color: isDark ? const Color(0xFF52525B) : const Color(0xFFCBD5E1),
             ),
           ],
         ),
@@ -306,14 +289,11 @@ class _LocationSelector extends ConsumerWidget {
   }
 
   void _showProxyPicker(BuildContext context) {
-    final theme = Theme.of(context);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
       builder: (context) => const _ProxyPickerSheet(),
     );
   }
@@ -423,98 +403,21 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.02)
-            : const Color(0xFF0a0a0a),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: isDark
-            ? Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.06)))
-            : null,
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+    final iconColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(64, 12, 64, 32),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _FooterItem(
-            icon: Icons.settings_outlined,
-            label: 'Настройки',
-            isDark: isDark,
-            onTap: () => context.goNamed('settings'),
+          IconButton(
+            onPressed: () => _openPurchase(context),
+            icon: Icon(Icons.credit_card_outlined, size: 22, color: iconColor),
           ),
-          const SizedBox(width: 10),
-          _FooterItem(
-            icon: Icons.credit_card_outlined,
-            label: 'Подписка',
-            isDark: isDark,
-            onTap: () => _openPurchase(context),
-          ),
-          const SizedBox(width: 10),
-          _FooterItem(
-            icon: Icons.bar_chart_rounded,
-            label: 'Статистика',
-            isDark: isDark,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Скоро'), duration: Duration(seconds: 1)),
-              );
-            },
+          IconButton(
+            onPressed: () => context.goNamed('settings'),
+            icon: Icon(Icons.settings_outlined, size: 22, color: iconColor),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FooterItem extends StatelessWidget {
-  const _FooterItem({
-    required this.icon,
-    required this.label,
-    required this.isDark,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isDark;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.03)
-                : Colors.white.withValues(alpha: 0.05),
-            border: isDark
-                ? Border.all(color: Colors.white.withValues(alpha: 0.05))
-                : null,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 24,
-                color: Colors.white.withValues(alpha: isDark ? 0.45 : 0.55),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white.withValues(alpha: isDark ? 0.35 : 0.4),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -592,136 +495,425 @@ class _DecoCircle extends StatelessWidget {
   }
 }
 
-// ─── Proxy picker (unchanged) ─────────────────────────────
+// ─── Proxy picker ─────────────────────────────────────────
 
 class _ProxyPickerSheet extends ConsumerWidget {
   const _ProxyPickerSheet();
 
+  static const _green = Color(0xFF00E5A0);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final proxies = ref.watch(proxiesOverviewNotifierProvider);
+    final bg = isDark ? const Color(0xFF09090B) : const Color(0xFFF5F7FA);
+    final cardBg = isDark ? const Color(0xFF18181B) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF27272A) : const Color(0xFFE2E8F0);
+    final sepColor = isDark ? const Color(0xFF27272A) : const Color(0xFFF1F5F9);
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.5,
-      minChildSize: 0.3,
-      maxChildSize: 0.85,
-      expand: false,
-      builder: (context, scrollController) {
-        return Column(
-          children: [
-            // Handle bar
-            Padding(
-              padding: const EdgeInsets.only(top: 12, bottom: 8),
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.92,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 16, 16, 0),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(Icons.arrow_back, color: textColor, size: 22),
                 ),
+                const SizedBox(width: 4),
+                Text(
+                  'Сервер',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Static search box
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cardBorder),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 12),
+                  Icon(Icons.search, size: 18, color: subColor),
+                  const SizedBox(width: 8),
+                  Text('Поиск страны...', style: TextStyle(color: subColor, fontSize: 14)),
+                ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Выберите локацию',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: proxies.when(
-                data: (group) {
-                  if (group == null || group.items.isEmpty) {
-                    return const Center(child: Text('Нет доступных серверов'));
-                  }
-                  // Filter out internal meta-groups (lowest, balance, select, §hide§)
-                  final realServers = group.items
-                      .where((p) => !_LocationSelector._isMetaProxy(p))
-                      .toList();
-                  if (realServers.isEmpty) {
-                    return const Center(child: Text('Нет доступных серверов'));
-                  }
-                  return ListView.builder(
-                    controller: scrollController,
-                    itemCount: realServers.length,
-                    itemBuilder: (context, index) {
-                      final proxy = realServers[index];
-                      final selected = group.selected == proxy.tag;
-                      final countryCode = _LocationSelector._detectCountryCode(proxy);
-                      final locationName = _LocationSelector._locationName(proxy, countryCode);
-
-                      return ListTile(
-                        leading: CircleFlag(countryCode.toLowerCase(), size: 32),
-                        title: Text(
-                          locationName,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                          ),
-                        ),
-                        subtitle: Text(
-                          proxy.urlTestDelay > 0 && proxy.urlTestDelay < 65000
-                              ? '${proxy.urlTestDelay} ms'
-                              : 'Проверка...',
-                          style: TextStyle(
-                            color: proxy.urlTestDelay > 0 && proxy.urlTestDelay < 65000
-                                ? null
-                                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                            fontSize: 12,
-                          ),
-                        ),
-                        trailing: selected
-                            ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
-                            : null,
-                        selected: selected,
-                        selectedTileColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        onTap: () async {
-                          await ref.read(proxiesOverviewNotifierProvider.notifier).changeProxy(
-                            group.tag,
-                            proxy.tag,
-                          );
-                          if (context.mounted) Navigator.of(context).pop();
-                        },
-                      );
-                    },
-                  );
-                },
-                error: (_, __) {
-                  final connState = ref.watch(connectionNotifierProvider);
-                  final isConnecting = connState.valueOrNull is Connecting;
-                  if (isConnecting) {
-                    return const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text('Загружаем серверы...'),
-                        ],
+          ),
+          // Server list
+          Expanded(
+            child: proxies.when(
+              data: (group) {
+                final realServers = group?.items
+                        .where((p) => !_LocationSelector._isMetaProxy(p))
+                        .toList() ??
+                    [];
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                  children: [
+                    // ── Россия section ──
+                    _SectionHeader(title: 'Россия', isDark: isDark),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: cardBorder),
+                        boxShadow: isDark
+                            ? null
+                            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
                       ),
-                    );
-                  }
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        'Подключитесь к VPN,\nчтобы выбрать локацию',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                      child: realServers.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Text(
+                                'Подключитесь к VPN,\nчтобы выбрать сервер',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: subColor, fontSize: 13),
+                              ),
+                            )
+                          : Column(
+                              children: List.generate(realServers.length, (i) {
+                                final proxy = realServers[i];
+                                final selected = group?.selected == proxy.tag;
+                                final countryCode = _LocationSelector._detectCountryCode(proxy);
+                                final locationName = _LocationSelector._locationName(proxy, countryCode);
+                                final isLast = i == realServers.length - 1;
+                                return Column(
+                                  children: [
+                                    _ServerTile(
+                                      countryCode: countryCode,
+                                      name: locationName,
+                                      delay: proxy.urlTestDelay,
+                                      selected: selected,
+                                      isDark: isDark,
+                                      onTap: group == null
+                                          ? null
+                                          : () async {
+                                              await ref
+                                                  .read(proxiesOverviewNotifierProvider.notifier)
+                                                  .changeProxy(group.tag, proxy.tag);
+                                              if (context.mounted) Navigator.of(context).pop();
+                                            },
+                                    ),
+                                    if (!isLast)
+                                      Divider(height: 1, indent: 64, color: sepColor),
+                                  ],
+                                );
+                              }),
+                            ),
+                    ),
+                    const SizedBox(height: 20),
+                    // ── Европа section (locked) ──
+                    _SectionHeader(
+                      title: 'Европа',
+                      isDark: isDark,
+                      badge: 'Семейный+',
+                      badgeColor: _green,
+                    ),
+                    const SizedBox(height: 8),
+                    Opacity(
+                      opacity: 0.5,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: cardBorder),
+                        ),
+                        child: Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                _openPurchase(context);
+                              },
+                              child: _ServerTile(
+                                countryCode: 'lv',
+                                name: 'Латвия',
+                                delay: 0,
+                                selected: false,
+                                isDark: isDark,
+                                locked: true,
+                              ),
+                            ),
+                            Divider(height: 1, indent: 64, color: sepColor),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                _openPurchase(context);
+                              },
+                              child: _ServerTile(
+                                countryCode: 'fi',
+                                name: 'Финляндия',
+                                delay: 0,
+                                selected: false,
+                                isDark: isDark,
+                                locked: true,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                    const SizedBox(height: 20),
+                    // ── Америка section (locked) ──
+                    _SectionHeader(
+                      title: 'Америка',
+                      isDark: isDark,
+                      badge: 'Про',
+                      badgeColor: const Color(0xFFF97316),
+                    ),
+                    const SizedBox(height: 8),
+                    Opacity(
+                      opacity: 0.5,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: cardBorder),
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            _openPurchase(context);
+                          },
+                          child: _ServerTile(
+                            countryCode: 'us',
+                            name: 'США',
+                            delay: 0,
+                            selected: false,
+                            isDark: isDark,
+                            locked: true,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+              error: (_, __) {
+                final connState = ref.watch(connectionNotifierProvider);
+                final isConnecting = connState.valueOrNull is Connecting;
+                final cardBg2 = isDark ? const Color(0xFF18181B) : Colors.white;
+                final cardBorder2 = isDark ? const Color(0xFF27272A) : const Color(0xFFE2E8F0);
+                final sepColor2 = isDark ? const Color(0xFF27272A) : const Color(0xFFF1F5F9);
+                final subColor2 = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
+
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                  children: [
+                    _SectionHeader(title: 'Россия', isDark: isDark),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: cardBg2,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: cardBorder2),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Center(
+                          child: isConnecting
+                              ? const CircularProgressIndicator(color: _green)
+                              : Text(
+                                  'Подключитесь к VPN,\nчтобы выбрать сервер',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: subColor2, fontSize: 13),
+                                ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _SectionHeader(
+                      title: 'Европа',
+                      isDark: isDark,
+                      badge: 'Семейный+',
+                      badgeColor: _green,
+                    ),
+                    const SizedBox(height: 8),
+                    Opacity(
+                      opacity: 0.5,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: cardBg2,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: cardBorder2),
+                        ),
+                        child: Column(
+                          children: [
+                            _ServerTile(countryCode: 'lv', name: 'Латвия', delay: 0, selected: false, isDark: isDark, locked: true),
+                            Divider(height: 1, indent: 64, color: sepColor2),
+                            _ServerTile(countryCode: 'fi', name: 'Финляндия', delay: 0, selected: false, isDark: isDark, locked: true),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _SectionHeader(
+                      title: 'Америка',
+                      isDark: isDark,
+                      badge: 'Про',
+                      badgeColor: const Color(0xFFF97316),
+                    ),
+                    const SizedBox(height: 8),
+                    Opacity(
+                      opacity: 0.5,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: cardBg2,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: cardBorder2),
+                        ),
+                        child: _ServerTile(countryCode: 'us', name: 'США', delay: 0, selected: false, isDark: isDark, locked: true),
+                      ),
+                    ),
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator(color: _green)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.isDark,
+    this.badge,
+    this.badgeColor,
+  });
+
+  final String title;
+  final bool isDark;
+  final String? badge;
+  final Color? badgeColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.0,
+            color: isDark ? const Color(0xFF52525B) : const Color(0xFF94A3B8),
+          ),
+        ),
+        if (badge != null) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(
+              color: badgeColor!.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              badge!,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: badgeColor,
               ),
             ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ServerTile extends StatelessWidget {
+  const _ServerTile({
+    required this.countryCode,
+    required this.name,
+    required this.delay,
+    required this.selected,
+    required this.isDark,
+    this.locked = false,
+    this.onTap,
+  });
+
+  final String countryCode;
+  final String name;
+  final int delay;
+  final bool selected;
+  final bool isDark;
+  final bool locked;
+  final VoidCallback? onTap;
+
+  static const _green = Color(0xFF00E5A0);
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        color: selected ? _green.withValues(alpha: 0.06) : Colors.transparent,
+        child: Row(
+          children: [
+            // Flag
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CircleFlag(countryCode, size: 36),
+            ),
+            const SizedBox(width: 12),
+            // Name
+            Expanded(
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  color: textColor,
+                ),
+              ),
+            ),
+            // Trailing
+            if (locked)
+              Icon(Icons.lock_outline, size: 16, color: subColor)
+            else if (selected)
+              const Icon(Icons.check_circle_rounded, size: 18, color: _green)
+            else if (delay > 0 && delay < 65000)
+              Text(
+                '${delay}ms',
+                style: TextStyle(fontSize: 12, color: subColor),
+              ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
