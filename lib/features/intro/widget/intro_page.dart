@@ -45,6 +45,8 @@ class IntroPage extends HookConsumerWidget with PresLogger {
               errorText.value = 'Неверный код активации';
             } else if (failure is ProfileInvalidConfigFailure) {
               errorText.value = 'Ошибка конфигурации: ${failure.message ?? "unknown"}';
+            } else if (failure is ProfileUnexpectedFailure) {
+              errorText.value = 'Unexpected: ${failure.error}';
             } else {
               errorText.value = 'Ошибка: ${failure.runtimeType}';
             }
@@ -284,6 +286,8 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
               errorText.value = 'Неверный код активации';
             } else if (failure is ProfileInvalidConfigFailure) {
               errorText.value = 'Ошибка конфигурации: ${failure.message ?? "unknown"}';
+            } else if (failure is ProfileUnexpectedFailure) {
+              errorText.value = 'Unexpected: ${failure.error}';
             } else {
               errorText.value = 'Ошибка: ${failure.runtimeType}';
             }
