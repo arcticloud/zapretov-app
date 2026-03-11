@@ -91,6 +91,8 @@ class PurchasePage extends ConsumerWidget {
     final familyProduct = state.products[PurchaseConstants.familyMonthly];
     final personalMonthlyPrice = personalProduct?.price ?? PurchaseConstants.productMeta[PurchaseConstants.personalMonthly]!.fallbackPrice;
     final familyMonthlyPrice = familyProduct?.price ?? PurchaseConstants.productMeta[PurchaseConstants.familyMonthly]!.fallbackPrice;
+    final iapAvailable = state.products.isNotEmpty;
+    final webFallback = () => launchUrl(Uri.parse('https://relokant.net/#pricing'));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
@@ -115,7 +117,7 @@ class PurchasePage extends ConsumerWidget {
               (label: 'Европейские серверы', included: false),
             ],
             isCurrent: false,
-            onTap: state.isPurchasing ? null : () => notifier.buy(PurchaseConstants.personalMonthly),
+            onTap: state.isPurchasing ? null : (iapAvailable ? () => notifier.buy(PurchaseConstants.personalMonthly) : webFallback),
             isPurchasing: state.isPurchasing,
           ),
           const SizedBox(height: 12),
@@ -133,7 +135,7 @@ class PurchasePage extends ConsumerWidget {
               (label: '5 устройств', included: true),
             ],
             isCurrent: false,
-            onTap: state.isPurchasing ? null : () => notifier.buy(PurchaseConstants.familyMonthly),
+            onTap: state.isPurchasing ? null : (iapAvailable ? () => notifier.buy(PurchaseConstants.familyMonthly) : webFallback),
             isPurchasing: state.isPurchasing,
           ),
           const SizedBox(height: 12),

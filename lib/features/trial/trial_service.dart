@@ -188,7 +188,9 @@ class TrialNotifier extends StateNotifier<TrialState> {
   void onBackground() {
     if (!_timerRunning) return;
     _timer?.cancel();
-    // _timerStartedAt stays set so we know we were counting
+    // Update _timerStartedAt to NOW so onForeground() only counts background time,
+    // not the entire duration since startTimer() (which _tick() already counted).
+    _timerStartedAt = DateTime.now();
   }
 
   /// Call when app returns to foreground — catch up on missed time
