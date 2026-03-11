@@ -43,12 +43,8 @@ class IntroPage extends HookConsumerWidget with PresLogger {
             isTrialLoading.value = false;
             if (failure is ProfileInvalidUrlFailure) {
               errorText.value = 'Неверный код активации';
-            } else if (failure is ProfileInvalidConfigFailure) {
-              errorText.value = 'Ошибка конфигурации: ${failure.message ?? "unknown"}';
-            } else if (failure is ProfileUnexpectedFailure) {
-              errorText.value = 'Unexpected: ${failure.error}';
             } else {
-              errorText.value = 'Ошибка: ${failure.runtimeType}';
+              errorText.value = 'Ошибка подключения. Попробуйте ещё раз.';
             }
             loggy.warning('Activation failed: $failure');
           },
@@ -59,7 +55,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
         );
       } catch (e) {
         isTrialLoading.value = false;
-        errorText.value = 'Ошибка: $e';
+        errorText.value = 'Ошибка подключения. Попробуйте ещё раз.';
         loggy.error('Activation error', e);
       }
     }
@@ -284,12 +280,8 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
             isLoading.value = false;
             if (failure is ProfileInvalidUrlFailure) {
               errorText.value = 'Неверный код активации';
-            } else if (failure is ProfileInvalidConfigFailure) {
-              errorText.value = 'Ошибка конфигурации: ${failure.message ?? "unknown"}';
-            } else if (failure is ProfileUnexpectedFailure) {
-              errorText.value = 'Unexpected: ${failure.error}';
             } else {
-              errorText.value = 'Ошибка: ${failure.runtimeType}';
+              errorText.value = 'Ошибка подключения. Попробуйте ещё раз.';
             }
             loggy.warning('Activation failed: $failure');
           },
@@ -300,7 +292,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         );
       } catch (e) {
         isLoading.value = false;
-        errorText.value = 'Ошибка: $e';
+        errorText.value = 'Ошибка подключения. Попробуйте ещё раз.';
         loggy.error('Activation error', e);
       }
     }

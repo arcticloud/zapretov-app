@@ -87,6 +87,7 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
         .asyncMap((proxies) async {
           final sorted = await _sortOutbounds(proxies, sortBy);
           _saveCache(sorted);
+          _applyCachedSelection(sorted);
           return sorted;
         });
   }
@@ -131,6 +132,26 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
       prefs.setString(_selectedCacheKey, tag);
     } catch (e) {
       loggy.warning("failed to cache selected proxy", e);
+    }
+  }
+
+  /// Apply cached server selection after VPN starts (user chose server while disconnected)
+  void _applyCachedSelection(OutboundGroup? group) {
+    if (group == null) return;
+    try {
+      final prefs = ref.read(sharedPreferencesProvider).requireValue;
+      final cachedTag = prefs.getString(_selectedCacheKey);
+      if (cachedTag == null || cachedTag.isEmpty) return;
+      if (cachedTag == group.selected) return;
+
+      final exists = group.items.any((item) => item.tag == cachedTag);
+      if (!exists) return;
+
+      loggy.info("applying cached server selection: $cachedTag");
+      changeProxy(group.tag, cachedTag);
+      prefs.remove(_selectedCacheKey);
+    } catch (e) {
+      loggy.warning("failed to apply cached selection", e);
     }
   }
 

@@ -49,7 +49,10 @@ class HiddifyCoreService with InfraLogger {
           loggy.error(e);
           if (PlatformUtils.isIOS) return;
           statusController.add(const CoreStatus.stopped());
-          ref.read(inAppNotificationControllerProvider).showErrorToast(e);
+          // Don't show gRPC unavailable errors to user — core may still be starting
+          if (!e.toString().contains('code: 14')) {
+            ref.read(inAppNotificationControllerProvider).showErrorToast(e);
+          }
         })
         .map((_) {
           loggy.info("Hiddify-core setup done");
@@ -66,13 +69,19 @@ class HiddifyCoreService with InfraLogger {
 
   TaskEither<String, Unit> validateConfigByPath(String path, String tempPath, bool debug) {
     return TaskEither(() async {
-      try {
-        final response = await core.fgClient.parse(ParseRequest(tempPath: tempPath, configPath: path, debug: false));
-        if (response.responseCode != ResponseCode.OK) return left("${response.responseCode} ${response.message}");
-      } catch (e) {
-        await setup().run();
-        final response = await core.fgClient.parse(ParseRequest(tempPath: tempPath, configPath: path, debug: false));
-        if (response.responseCode != ResponseCode.OK) return left("${response.responseCode} ${response.message}");
+      for (var attempt = 0; attempt < 3; attempt++) {
+        try {
+          final response = await core.fgClient.parse(ParseRequest(tempPath: tempPath, configPath: path, debug: false));
+          if (response.responseCode != ResponseCode.OK) return left("${response.responseCode} ${response.message}");
+          return right(unit);
+        } catch (e) {
+          if (attempt < 2) {
+            await setup().run();
+            await Future.delayed(Duration(seconds: attempt + 1));
+          } else {
+            return left("gRPC unavailable after retries: $e");
+          }
+        }
       }
       return right(unit);
     });
