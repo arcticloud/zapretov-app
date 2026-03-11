@@ -220,9 +220,23 @@ class _LocationSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeProxy = ref.watch(
+    var activeProxy = ref.watch(
       activeProxyNotifierProvider.select((value) => value.valueOrNull),
     );
+    // Fall back to cached server list selection when disconnected
+    if (activeProxy == null) {
+      final cachedGroup = ref.watch(
+        proxiesOverviewNotifierProvider.select((value) => value.valueOrNull),
+      );
+      if (cachedGroup != null && cachedGroup.selected.isNotEmpty) {
+        activeProxy = cachedGroup.items
+            .where((p) => p.tag == cachedGroup.selected)
+            .firstOrNull;
+        activeProxy ??= cachedGroup.items
+            .where((p) => !_isMetaProxy(p))
+            .firstOrNull;
+      }
+    }
     final countryCode = _detectCountryCode(activeProxy);
     final locationName = _locationName(activeProxy, countryCode);
 
@@ -570,146 +584,171 @@ class _ProxyPickerSheet extends ConsumerWidget {
                         .where((p) => !_LocationSelector._isMetaProxy(p))
                         .toList() ??
                     [];
+
+                // Split servers by region
+                const euCodes = {'lv', 'fi', 'de', 'nl', 'fr', 'es', 'ee', 'pl', 'se', 'cz', 'gb'};
+                const usCodes = {'us'};
+                final ruServers = <int>[];
+                final euServers = <int>[];
+                final usServers = <int>[];
+                for (var i = 0; i < realServers.length; i++) {
+                  final cc = _LocationSelector._detectCountryCode(realServers[i]);
+                  if (euCodes.contains(cc)) {
+                    euServers.add(i);
+                  } else if (usCodes.contains(cc)) {
+                    usServers.add(i);
+                  } else {
+                    ruServers.add(i);
+                  }
+                }
+
+                Widget buildServerCard(List<int> indices) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: cardBorder),
+                      boxShadow: isDark
+                          ? null
+                          : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
+                    ),
+                    child: Column(
+                      children: List.generate(indices.length, (j) {
+                        final proxy = realServers[indices[j]];
+                        final selected = group?.selected == proxy.tag;
+                        final countryCode = _LocationSelector._detectCountryCode(proxy);
+                        final locationName = _LocationSelector._locationName(proxy, countryCode);
+                        final isLast = j == indices.length - 1;
+                        return Column(
+                          children: [
+                            _ServerTile(
+                              countryCode: countryCode,
+                              name: locationName,
+                              delay: proxy.urlTestDelay,
+                              selected: selected,
+                              isDark: isDark,
+                              onTap: group == null
+                                  ? null
+                                  : () async {
+                                      await ref
+                                          .read(proxiesOverviewNotifierProvider.notifier)
+                                          .changeProxy(group.tag, proxy.tag);
+                                      if (context.mounted) Navigator.of(context).pop();
+                                    },
+                            ),
+                            if (!isLast)
+                              Divider(height: 1, indent: 64, color: sepColor),
+                          ],
+                        );
+                      }),
+                    ),
+                  );
+                }
+
+                Widget buildLockedCard(List<(String, String)> servers) {
+                  return Opacity(
+                    opacity: 0.5,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: cardBorder),
+                      ),
+                      child: Column(
+                        children: List.generate(servers.length, (j) {
+                          final isLast = j == servers.length - 1;
+                          return Column(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  _openPurchase(context);
+                                },
+                                child: _ServerTile(
+                                  countryCode: servers[j].$1,
+                                  name: servers[j].$2,
+                                  delay: 0,
+                                  selected: false,
+                                  isDark: isDark,
+                                  locked: true,
+                                ),
+                              ),
+                              if (!isLast)
+                                Divider(height: 1, indent: 64, color: sepColor),
+                            ],
+                          );
+                        }),
+                      ),
+                    ),
+                  );
+                }
+
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                   children: [
                     // ── Россия section ──
                     _SectionHeader(title: 'Россия', isDark: isDark),
                     const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: cardBg,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: cardBorder),
-                        boxShadow: isDark
-                            ? null
-                            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
-                      ),
-                      child: realServers.isEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Text(
-                                'Подключитесь к VPN,\nчтобы выбрать сервер',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: subColor, fontSize: 13),
-                              ),
-                            )
-                          : Column(
-                              children: List.generate(realServers.length, (i) {
-                                final proxy = realServers[i];
-                                final selected = group?.selected == proxy.tag;
-                                final countryCode = _LocationSelector._detectCountryCode(proxy);
-                                final locationName = _LocationSelector._locationName(proxy, countryCode);
-                                final isLast = i == realServers.length - 1;
-                                return Column(
-                                  children: [
-                                    _ServerTile(
-                                      countryCode: countryCode,
-                                      name: locationName,
-                                      delay: proxy.urlTestDelay,
-                                      selected: selected,
-                                      isDark: isDark,
-                                      onTap: group == null
-                                          ? null
-                                          : () async {
-                                              await ref
-                                                  .read(proxiesOverviewNotifierProvider.notifier)
-                                                  .changeProxy(group.tag, proxy.tag);
-                                              if (context.mounted) Navigator.of(context).pop();
-                                            },
-                                    ),
-                                    if (!isLast)
-                                      Divider(height: 1, indent: 64, color: sepColor),
-                                  ],
-                                );
-                              }),
-                            ),
-                    ),
-                    const SizedBox(height: 20),
-                    // ── Европа section (locked) ──
-                    _SectionHeader(
-                      title: 'Европа',
-                      isDark: isDark,
-                      badge: 'Семейный+',
-                      badgeColor: _green,
-                    ),
-                    const SizedBox(height: 8),
-                    Opacity(
-                      opacity: 0.5,
-                      child: Container(
+                    if (realServers.isEmpty)
+                      Container(
                         decoration: BoxDecoration(
                           color: cardBg,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: cardBorder),
                         ),
-                        child: Column(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                _openPurchase(context);
-                              },
-                              child: _ServerTile(
-                                countryCode: 'lv',
-                                name: 'Латвия',
-                                delay: 0,
-                                selected: false,
-                                isDark: isDark,
-                                locked: true,
-                              ),
-                            ),
-                            Divider(height: 1, indent: 64, color: sepColor),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                _openPurchase(context);
-                              },
-                              child: _ServerTile(
-                                countryCode: 'fi',
-                                name: 'Финляндия',
-                                delay: 0,
-                                selected: false,
-                                isDark: isDark,
-                                locked: true,
-                              ),
-                            ),
-                          ],
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Text(
+                            'Подключитесь к VPN,\nчтобы выбрать сервер',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: subColor, fontSize: 13),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    // ── Америка section (locked) ──
-                    _SectionHeader(
-                      title: 'Америка',
-                      isDark: isDark,
-                      badge: 'Про',
-                      badgeColor: const Color(0xFFF97316),
-                    ),
-                    const SizedBox(height: 8),
-                    Opacity(
-                      opacity: 0.5,
-                      child: Container(
+                      )
+                    else if (ruServers.isNotEmpty)
+                      buildServerCard(ruServers)
+                    else
+                      Container(
                         decoration: BoxDecoration(
                           color: cardBg,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: cardBorder),
                         ),
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            _openPurchase(context);
-                          },
-                          child: _ServerTile(
-                            countryCode: 'us',
-                            name: 'США',
-                            delay: 0,
-                            selected: false,
-                            isDark: isDark,
-                            locked: true,
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Text(
+                            'Нет серверов в этом регионе',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: subColor, fontSize: 13),
                           ),
                         ),
                       ),
+                    const SizedBox(height: 20),
+                    // ── Европа section ──
+                    _SectionHeader(
+                      title: 'Европа',
+                      isDark: isDark,
+                      badge: euServers.isEmpty ? 'Семейный+' : null,
+                      badgeColor: _green,
                     ),
+                    const SizedBox(height: 8),
+                    if (euServers.isNotEmpty)
+                      buildServerCard(euServers)
+                    else
+                      buildLockedCard([('lv', 'Латвия'), ('fi', 'Финляндия')]),
+                    const SizedBox(height: 20),
+                    // ── Америка section ──
+                    _SectionHeader(
+                      title: 'Америка',
+                      isDark: isDark,
+                      badge: usServers.isEmpty ? 'Про' : null,
+                      badgeColor: const Color(0xFFF97316),
+                    ),
+                    const SizedBox(height: 8),
+                    if (usServers.isNotEmpty)
+                      buildServerCard(usServers)
+                    else
+                      buildLockedCard([('us', 'США')]),
                   ],
                 );
               },
