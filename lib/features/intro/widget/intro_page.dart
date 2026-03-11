@@ -282,8 +282,10 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
             isLoading.value = false;
             if (failure is ProfileInvalidUrlFailure) {
               errorText.value = 'Неверный код активации';
+            } else if (failure is ProfileInvalidConfigFailure) {
+              errorText.value = 'Ошибка конфигурации: ${failure.message ?? "unknown"}';
             } else {
-              errorText.value = 'Ошибка подключения. Попробуйте позже.';
+              errorText.value = 'Ошибка: ${failure.runtimeType}';
             }
             loggy.warning('Activation failed: $failure');
           },
