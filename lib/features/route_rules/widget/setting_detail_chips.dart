@@ -3,8 +3,6 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:installed_apps/app_info.dart';
-import 'package:installed_apps/installed_apps.dart';
 
 class SettingDetailChips<T extends Object> extends HookConsumerWidget {
   const SettingDetailChips({
@@ -160,49 +158,24 @@ class SettingDetailChip<T extends Object> extends ConsumerWidget {
   }
 }
 
-class AndroidAppInfo extends HookConsumerWidget {
+class AndroidAppInfo extends StatelessWidget {
   const AndroidAppInfo({super.key, required this.packageName});
 
   final String packageName;
 
-  String useEllipsis() {
+  String _ellipsis() {
     if (packageName.length > 20) {
       return '${packageName.substring(0, 10)}...${packageName.substring(packageName.length - 10)}';
-    } else {
-      return packageName;
     }
+    return packageName;
   }
 
-  Future<AppInfo?> getAppInfo() async => await InstalledApps.getAppInfo(packageName, BuiltWith.flutter);
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final app = useFuture<AppInfo?>(useMemoized(() => getAppInfo(), [packageName]));
-    if (app.hasData && app.data != null) {
-      return Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(4, 4, 8, 4),
-        child: Row(
-          children: [
-            AspectRatio(
-              aspectRatio: 1.0,
-              child: CircleAvatar(backgroundColor: Colors.transparent, child: Image.memory(app.data!.icon!)),
-            ),
-            const Gap(4),
-            Text(app.data!.name, style: Theme.of(context).textTheme.labelMedium),
-          ],
-        ),
-      );
-    } else if (app.hasError || (app.hasData && app.data == null)) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(useEllipsis(), style: Theme.of(context).textTheme.labelMedium),
-      );
-    } else {
-      return const Padding(
-        padding: EdgeInsets.all(4),
-        child: AspectRatio(aspectRatio: 1.0, child: CircularProgressIndicator()),
-      );
-    }
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Text(_ellipsis(), style: Theme.of(context).textTheme.labelMedium),
+    );
   }
 }
 

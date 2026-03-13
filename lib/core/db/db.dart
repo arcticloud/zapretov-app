@@ -3,7 +3,6 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:hiddify/core/db/converters/duration_converter.dart';
 import 'package:hiddify/core/db/db.steps.dart';
 import 'package:hiddify/core/directories/directories_provider.dart';
-import 'package:hiddify/features/per_app_proxy/model/per_app_proxy_mode.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 
@@ -108,6 +107,9 @@ class ProfileEntries extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+// Kept for backward DB compatibility (schema v5 created this table)
+enum AppProxyMode { include, exclude }
 
 @DataClassName('AppProxyEntry')
 class AppProxyEntries extends Table {

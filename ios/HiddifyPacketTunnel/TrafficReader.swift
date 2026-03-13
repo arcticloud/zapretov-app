@@ -18,7 +18,6 @@ class TrafficReader {
     private let callback: (TrafficReaderUpdate) -> ()
     
     init(onUpdate: @escaping (TrafficReaderUpdate) -> ()) {
-        NSLog("H?D2")
         self.callback = onUpdate
         Task(priority: .background) { [weak self] () in
             await self?.setup()
@@ -26,7 +25,6 @@ class TrafficReader {
     }
     
     private func setup() async {
-        NSLog("H?D1")
         try? await Task.sleep(nanoseconds: 5_000_000_000)
         //return
         while true {
@@ -48,7 +46,6 @@ class TrafficReader {
     }
     
     private func read() {
-        NSLog("H?D3")
         task.receive { [weak self] result in
             switch result {
             case .failure(_):

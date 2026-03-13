@@ -38,7 +38,7 @@ dependencies:
   dio: ^5.4.1
   ffi: ^2.1.2
   path_provider: ^2.1.1
-  mobile_scanner: ^7.2.0
+  # mobile_scanner removed — camera not needed for VPN app
   # protocol_handler: ^0.2.0
   flutter_native_splash: ^2.3.10
   share_plus: ^10.1.0
@@ -110,14 +110,12 @@ dependencies:
   simple_icons: ^10.1.3
   animated_notch_bottom_bar: ^1.0.0
   basic_utils: 5.7.0
-  showcaseview: 3.0.0
   text_scroll: ^0.2.0
   flutter_markdown_plus: ^1.0.6
   # platform-specific  settings
   # https://github.com/miguelpruivo/flutter_file_picker/wiki/Setup
   file_picker: ^8.1.7
-  installed_apps: # ^1.5.2
-    git: https://github.com/VB10/installed_apps
+  # installed_apps removed — QUERY_ALL_PACKAGES causes Google Play rejection
 
   # change case of text
   # for example camelCase to snake_case

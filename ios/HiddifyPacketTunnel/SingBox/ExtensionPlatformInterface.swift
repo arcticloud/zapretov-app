@@ -20,7 +20,6 @@ public class ExtensionPlatformInterface: NSObject, LibboxPlatformInterfaceProtoc
     }
 
     public func openTun(_ options: LibboxTunOptionsProtocol?, ret0_: UnsafeMutablePointer<Int32>?) throws {
-        NSLog("H?A1")
         try runBlocking { [self] in
             try await openTun0(options, ret0_)
         }

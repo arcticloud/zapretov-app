@@ -2,6 +2,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:loggy/loggy.dart';
 
 class ConsolePrinter extends LoggyPrinter {
@@ -31,10 +32,12 @@ class ConsolePrinter extends LoggyPrinter {
 
     final color = showColors ? levelColor(record.level) ?? AnsiColor() : AnsiColor();
 
-    print(color('$time $logLevel [${record.loggerName}]$callerFrame${record.message}'));
+    if (kDebugMode) {
+      print(color('$time $logLevel [${record.loggerName}]$callerFrame${record.message}'));
 
-    if (record.stackTrace != null) {
-      print(record.stackTrace);
+      if (record.stackTrace != null) {
+        print(record.stackTrace);
+      }
     }
   }
 

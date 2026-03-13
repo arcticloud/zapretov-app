@@ -9,7 +9,6 @@ import Foundation
 
 class SingBox {
     static func setupConfig(config: String, mtu: Int = 9000) -> String? {
-        NSLog("H?B1")
         guard
             let config = config.data(using: .utf8),
             var json = try? JSONSerialization
