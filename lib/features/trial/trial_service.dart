@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,19 +7,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 const _apiBase = 'https://api.relokant.net';
-const _dailyLimitSeconds = 10 * 60; // 10 minutes
 
 const _keyDeviceId = 'trial_device_id';
 const _keyActivationCode = 'trial_activation_code';
-const _keyUsedSeconds = 'trial_used_seconds';
-const _keyLastDate = 'trial_last_date';
+const _keyExpiresAt = 'trial_expires_at';
 const _keyIsTrial = 'trial_is_trial';
 
 class TrialState {
   const TrialState({
     this.isTrial = false,
     this.activationCode,
-    this.remainingSeconds = _dailyLimitSeconds,
+    this.expiresAt,
     this.isExpired = false,
     this.isLoading = false,
     this.error,
@@ -28,7 +25,7 @@ class TrialState {
 
   final bool isTrial;
   final String? activationCode;
-  final int remainingSeconds;
+  final DateTime? expiresAt;
   final bool isExpired;
   final bool isLoading;
   final String? error;
@@ -36,7 +33,7 @@ class TrialState {
   TrialState copyWith({
     bool? isTrial,
     String? activationCode,
-    int? remainingSeconds,
+    DateTime? expiresAt,
     bool? isExpired,
     bool? isLoading,
     String? error,
@@ -44,7 +41,7 @@ class TrialState {
     return TrialState(
       isTrial: isTrial ?? this.isTrial,
       activationCode: activationCode ?? this.activationCode,
-      remainingSeconds: remainingSeconds ?? this.remainingSeconds,
+      expiresAt: expiresAt ?? this.expiresAt,
       isExpired: isExpired ?? this.isExpired,
       isLoading: isLoading ?? this.isLoading,
       error: error,
@@ -58,9 +55,6 @@ class TrialNotifier extends StateNotifier<TrialState> {
   }
 
   final SharedPreferences _prefs;
-  Timer? _timer;
-  DateTime? _timerStartedAt; // tracks when timer was last running (for background catch-up)
-  bool _timerRunning = false;
 
   void _loadState() {
     final isTrial = _prefs.getBool(_keyIsTrial) ?? false;
@@ -68,24 +62,19 @@ class TrialNotifier extends StateNotifier<TrialState> {
 
     if (!isTrial || code == null) return;
 
-    final today = _todayStr();
-    final lastDate = _prefs.getString(_keyLastDate) ?? '';
-    var usedSeconds = _prefs.getInt(_keyUsedSeconds) ?? 0;
-
-    // Reset daily counter if new day
-    if (lastDate != today) {
-      usedSeconds = 0;
-      _prefs.setInt(_keyUsedSeconds, 0);
-      _prefs.setString(_keyLastDate, today);
+    final expiresStr = _prefs.getString(_keyExpiresAt);
+    DateTime? expiresAt;
+    if (expiresStr != null && expiresStr.isNotEmpty) {
+      expiresAt = DateTime.tryParse(expiresStr);
     }
 
-    final remaining = (_dailyLimitSeconds - usedSeconds).clamp(0, _dailyLimitSeconds);
+    final expired = expiresAt != null && DateTime.now().isAfter(expiresAt);
 
     state = TrialState(
       isTrial: true,
       activationCode: code,
-      remainingSeconds: remaining,
-      isExpired: remaining <= 0,
+      expiresAt: expiresAt,
+      isExpired: expired,
     );
   }
 
@@ -96,11 +85,6 @@ class TrialNotifier extends StateNotifier<TrialState> {
       _prefs.setString(_keyDeviceId, id);
     }
     return id;
-  }
-
-  String _todayStr() {
-    final now = DateTime.now();
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
   Future<String?> createTrial() async {
@@ -124,6 +108,7 @@ class TrialNotifier extends StateNotifier<TrialState> {
 
       final data = jsonDecode(body) as Map<String, dynamic>;
       final code = data['activation_code'] as String?;
+      final expiresAtStr = data['expires_at'] as String?;
 
       if (code == null || code.isEmpty) {
         state = state.copyWith(isLoading: false, error: 'Ошибка сервера');
@@ -132,13 +117,16 @@ class TrialNotifier extends StateNotifier<TrialState> {
 
       await _prefs.setString(_keyActivationCode, code);
       await _prefs.setBool(_keyIsTrial, true);
-      await _prefs.setString(_keyLastDate, _todayStr());
-      await _prefs.setInt(_keyUsedSeconds, 0);
+      if (expiresAtStr != null) {
+        await _prefs.setString(_keyExpiresAt, expiresAtStr);
+      }
+
+      final expiresAt = expiresAtStr != null ? DateTime.tryParse(expiresAtStr) : null;
 
       state = TrialState(
         isTrial: true,
         activationCode: code,
-        remainingSeconds: _dailyLimitSeconds,
+        expiresAt: expiresAt,
         isExpired: false,
       );
 
@@ -149,97 +137,19 @@ class TrialNotifier extends StateNotifier<TrialState> {
     }
   }
 
-  /// Call when VPN connects — start counting time
-  void startTimer() {
-    _timer?.cancel();
-    if (!state.isTrial || state.isExpired) return;
-
-    _timerRunning = true;
-    _timerStartedAt = DateTime.now();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _tick();
-    });
-  }
-
-  void _tick() {
-    final used = (_prefs.getInt(_keyUsedSeconds) ?? 0) + 1;
-    _prefs.setInt(_keyUsedSeconds, used);
-
-    final remaining = (_dailyLimitSeconds - used).clamp(0, _dailyLimitSeconds);
-    state = state.copyWith(
-      remainingSeconds: remaining,
-      isExpired: remaining <= 0,
-    );
-
-    if (remaining <= 0) {
-      _timer?.cancel();
-      _timerRunning = false;
+  /// Re-check if trial has expired (call on foreground resume)
+  void checkExpiry() {
+    if (!state.isTrial || state.expiresAt == null) return;
+    final expired = DateTime.now().isAfter(state.expiresAt!);
+    if (expired != state.isExpired) {
+      state = state.copyWith(isExpired: expired);
     }
-  }
-
-  /// Call when VPN disconnects — stop counting
-  void stopTimer() {
-    _timer?.cancel();
-    _timerRunning = false;
-    _timerStartedAt = null;
-  }
-
-  /// Call when app goes to background — pause Dart timer but record timestamp
-  void onBackground() {
-    if (!_timerRunning) return;
-    _timer?.cancel();
-    // Update _timerStartedAt to NOW so onForeground() only counts background time,
-    // not the entire duration since startTimer() (which _tick() already counted).
-    _timerStartedAt = DateTime.now();
-  }
-
-  /// Call when app returns to foreground — catch up on missed time
-  void onForeground() {
-    if (!_timerRunning || _timerStartedAt == null) return;
-    if (!state.isTrial || state.isExpired) return;
-
-    // Calculate seconds elapsed while in background
-    final now = DateTime.now();
-    final elapsed = now.difference(_timerStartedAt!).inSeconds;
-    // We already counted 1 sec per tick before going background,
-    // so only add the difference (elapsed - 0 since timer was stopped)
-    if (elapsed > 1) {
-      final missedSeconds = elapsed - 1; // -1 because last tick was right before pause
-      final currentUsed = _prefs.getInt(_keyUsedSeconds) ?? 0;
-      final newUsed = currentUsed + missedSeconds;
-      _prefs.setInt(_keyUsedSeconds, newUsed);
-
-      final remaining = (_dailyLimitSeconds - newUsed).clamp(0, _dailyLimitSeconds);
-      state = state.copyWith(
-        remainingSeconds: remaining,
-        isExpired: remaining <= 0,
-      );
-
-      if (remaining <= 0) {
-        _timerRunning = false;
-        _timerStartedAt = null;
-        return;
-      }
-    }
-
-    // Restart the periodic timer
-    _timerStartedAt = DateTime.now();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _tick();
-    });
   }
 
   /// Mark as upgraded (no longer trial)
   void clearTrial() {
-    _timer?.cancel();
     _prefs.setBool(_keyIsTrial, false);
     state = const TrialState();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 }
 

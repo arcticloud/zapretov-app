@@ -13,6 +13,7 @@ import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/purchase/purchase_page.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
 import 'package:hiddify/features/trial/trial_service.dart';
+import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -125,10 +126,10 @@ class ConnectionButton extends HookConsumerWidget {
                 child: const Icon(Icons.timer_off_outlined, size: 32, color: Color(0xFFFF4444)),
               ),
               const SizedBox(height: 20),
-              Text('Лимит исчерпан', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              Text('Пробный период закончился', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
               Text(
-                'Вы использовали 10 минут сегодня.\nВозвращайтесь завтра или оформите подписку.',
+                '3 бесплатных дня истекли.\nОформите подписку для продолжения.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.5),
               ),
@@ -152,10 +153,21 @@ class ConnectionButton extends HookConsumerWidget {
                   child: const Text('Оформить подписку', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text('Вернуться завтра', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 14)),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity, height: 44,
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const CodeEntryPage()));
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF00E5A0),
+                    side: const BorderSide(color: Color(0xFF00E5A0)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: const Text('Ввести код активации', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
               ),
             ],
           ),

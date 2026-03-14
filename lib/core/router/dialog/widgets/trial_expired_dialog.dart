@@ -40,13 +40,13 @@ class TrialExpiredDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Лимит исчерпан',
+              'Пробный период закончился',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textColor),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              '10 бесплатных минут закончились.\nКупите подписку для безлимитного доступа.',
+              '3 бесплатных дня истекли.\nОформите подписку для продолжения.',
               style: TextStyle(fontSize: 14, color: subColor, height: 1.5),
               textAlign: TextAlign.center,
             ),
@@ -97,20 +97,6 @@ class TrialExpiredDialog extends StatelessWidget {
                   'Ввести код активации',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 ),
-              ),
-            ),
-            const SizedBox(height: 4),
-
-            // ─── Come back tomorrow ───
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => context.pop(),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  foregroundColor: subColor,
-                ),
-                child: const Text('Вернуться завтра', style: TextStyle(fontSize: 13)),
               ),
             ),
           ],

@@ -175,14 +175,14 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Подключиться',
+                                'Попробовать бесплатно',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                               Text(
-                                'Бесплатно · 10 минут в день',
+                                '3 дня · 1 ГБ/день · все серверы',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w400,

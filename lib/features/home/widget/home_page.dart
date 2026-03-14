@@ -47,19 +47,7 @@ class HomePage extends HookConsumerWidget {
     final connectionStatus = ref.watch(connectionNotifierProvider);
     final isConnected = connectionStatus.valueOrNull is Connected;
 
-    // Start/stop trial timer based on VPN connection state
-    ref.listen(connectionNotifierProvider, (prev, next) {
-      if (!trialState.isTrial) return;
-      final wasConnected = prev?.valueOrNull is Connected;
-      final nowConnected = next.valueOrNull is Connected;
-      if (!wasConnected && nowConnected) {
-        ref.read(trialProvider.notifier).startTimer();
-      } else if (wasConnected && !nowConnected) {
-        ref.read(trialProvider.notifier).stopTimer();
-      }
-    });
-
-    // Auto-disconnect when trial expires — fires every time trial ticks while expired + connected
+    // Auto-disconnect when trial expires
     ref.listen(trialProvider, (prev, next) {
       if (next.isTrial && next.isExpired) {
         final connStatus = ref.read(connectionNotifierProvider).valueOrNull;
@@ -104,7 +92,7 @@ class HomePage extends HookConsumerWidget {
                     _Header(isDark: isDark),
                     if (trialState.isTrial) ...[
                       const SizedBox(height: 4),
-                      _TrialTimerBar(isDark: isDark, trialState: trialState),
+                      _TrialInfoBar(isDark: isDark, trialState: trialState),
                     ],
                     const SizedBox(height: 8),
                     _LocationSelector(isDark: isDark),
@@ -1052,21 +1040,36 @@ class _ServerTile extends StatelessWidget {
   }
 }
 
-// ─── Trial timer bar ──────────────────────────────────────
+// ─── Trial info bar (3-day trial, no countdown) ──────────
 
-class _TrialTimerBar extends StatelessWidget {
-  const _TrialTimerBar({required this.isDark, required this.trialState});
+class _TrialInfoBar extends StatelessWidget {
+  const _TrialInfoBar({required this.isDark, required this.trialState});
   final bool isDark;
   final TrialState trialState;
 
   @override
   Widget build(BuildContext context) {
-    final remaining = trialState.remainingSeconds;
-    final minutes = remaining ~/ 60;
-    final seconds = remaining % 60;
-    final timeStr = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    final progress = remaining / (10 * 60);
-    final isLow = remaining < 120; // < 2 min
+    final expiresAt = trialState.expiresAt;
+    String remainingText = 'Пробный период';
+    double progress = 1.0;
+
+    if (expiresAt != null) {
+      final now = DateTime.now();
+      final total = const Duration(days: 3);
+      final left = expiresAt.difference(now);
+      progress = (left.inSeconds / total.inSeconds).clamp(0.0, 1.0);
+
+      if (left.inDays >= 1) {
+        final hours = left.inHours % 24;
+        remainingText = 'Пробный период · ${left.inDays} д ${hours} ч';
+      } else if (left.inHours >= 1) {
+        remainingText = 'Пробный период · ${left.inHours} ч ${left.inMinutes % 60} мин';
+      } else if (left.inMinutes >= 1) {
+        remainingText = 'Пробный период · ${left.inMinutes} мин';
+      } else {
+        remainingText = 'Пробный период истекает';
+      }
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1083,54 +1086,24 @@ class _TrialTimerBar extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  Icons.timer_outlined,
+                  Icons.schedule_outlined,
                   size: 14,
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.4)
                       : Colors.black.withValues(alpha: 0.5),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  'Пробный доступ',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.4)
-                        : Colors.black.withValues(alpha: 0.5),
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  timeStr,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    color: trialState.isExpired
-                        ? const Color(0xFFFF4444)
-                        : isLow
-                            ? const Color(0xFFFF8800)
-                            : isDark
-                                ? const Color(0xFF00E5A0)
-                                : const Color(0xFF0a0a0a),
-                  ),
-                ),
-                if (isLow || trialState.isExpired) ...[
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => _openPurchase(context),
-                    child: const Text(
-                      'Купить',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF00E5A0),
-                        decoration: TextDecoration.underline,
-                        decorationColor: Color(0xFF00E5A0),
-                      ),
+                Expanded(
+                  child: Text(
+                    remainingText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.5)
+                          : Colors.black.withValues(alpha: 0.6),
                     ),
                   ),
-                ],
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -1142,13 +1115,7 @@ class _TrialTimerBar extends StatelessWidget {
                 backgroundColor: isDark
                     ? Colors.white.withValues(alpha: 0.06)
                     : Colors.black.withValues(alpha: 0.08),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  trialState.isExpired
-                      ? const Color(0xFFFF4444)
-                      : isLow
-                          ? const Color(0xFFFF8800)
-                          : const Color(0xFF00E5A0),
-                ),
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00E5A0)),
               ),
             ),
           ],
@@ -1352,14 +1319,14 @@ class _TrialExpiredDialog extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'Время вышло',
+              'Пробный период закончился',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              '10 бесплатных минут на сегодня закончились.\nКупите подписку — код для подключения придёт на email.',
+              '3 бесплатных дня истекли.\nОформите подписку для продолжения.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -1409,17 +1376,6 @@ class _TrialExpiredDialog extends StatelessWidget {
                 child: const Text(
                   'У меня есть код',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Вернуться завтра',
-                style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontSize: 14,
                 ),
               ),
             ),
