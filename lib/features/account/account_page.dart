@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hiddify/features/account/account_service.dart';
+import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
+import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -377,6 +379,24 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     Color cardBorder,
   ) {
     final tiles = <_TileData>[];
+
+    // Show "Enter code" for trial users or expired subscriptions
+    final trialState = ref.read(trialProvider);
+    if (trialState.isTrial || !info.isActive) {
+      tiles.add(_TileData(
+        icon: Icons.key_rounded,
+        iconBg: isDark ? const Color(0xFF1A2E1A) : const Color(0xFFF0FFF4),
+        iconColor: _green,
+        label: 'Ввести код активации',
+        sub: 'Купили подписку? Введите код',
+        onTap: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const CodeEntryPage()),
+          );
+          _loadData(); // Reload account info after activation
+        },
+      ));
+    }
 
     if (info.upgrades.isNotEmpty) {
       final upgradeNames = info.upgrades.map((u) => u.name).join(', ');

@@ -246,7 +246,9 @@ class IntroPage extends HookConsumerWidget with PresLogger {
 // ═══════════════════════════════════════════════════════════════
 
 class CodeEntryPage extends HookConsumerWidget with PresLogger {
-  const CodeEntryPage({super.key});
+  const CodeEntryPage({super.key, this.initialCode});
+
+  final String? initialCode;
 
   static const _serverBase = 'https://api.relokant.net';
 
@@ -257,7 +259,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final codeController = useTextEditingController();
+    final codeController = useTextEditingController(text: initialCode ?? '');
     final emailController = useTextEditingController();
     final isLoading = useState(false);
     final errorText = useState<String?>(null);
@@ -287,7 +289,11 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
           },
           (_) async {
             loggy.info('Activation successful');
+            ref.read(trialProvider.notifier).clearTrial();
             await ref.read(Preferences.introCompleted.notifier).update(true);
+            if (context.mounted && Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
           },
         );
       } catch (e) {

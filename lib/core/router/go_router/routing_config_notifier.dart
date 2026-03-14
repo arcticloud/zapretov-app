@@ -11,6 +11,7 @@ import 'package:hiddify/features/about/widget/about_page.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/features/splash/splash_page.dart';
+import 'package:hiddify/core/router/go_router/go_router_notifier.dart';
 import 'package:hiddify/features/profile/details/profile_details_page.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/profile/overview/profiles_page.dart';
@@ -78,8 +79,27 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
           url = state.uri.queryParameters['url'];
         }
 
+        // Handle activation deep link: relokant://activate/CODE
+        String? activationCode;
+        if (url != null && url.startsWith('relokant://activate/')) {
+          activationCode = url.split('relokant://activate/').last.trim();
+          url = null; // Don't treat as profile import
+        }
+
         if (!introCompleted) {
           return url != null ? '/intro?url=$url' : '/intro';
+        } else if (activationCode != null && activationCode.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final ctx = rootNavKey.currentContext;
+            if (ctx != null) {
+              Navigator.of(ctx).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => CodeEntryPage(initialCode: activationCode),
+                ),
+              );
+            }
+          });
+          return isIntro ? '/home' : null;
         } else if (isIntro) {
           if (url != null)
             WidgetsBinding.instance.addPostFrameCallback(
