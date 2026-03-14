@@ -12,12 +12,19 @@ import 'package:hiddify/features/home/widget/connection_button.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
+import 'package:hiddify/features/account/account_page.dart';
 import 'package:hiddify/features/purchase/purchase_page.dart';
 import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+void _openAccount(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(builder: (_) => const AccountPage()),
+  );
+}
 
 void _openPurchase(BuildContext context) {
   if (Platform.isIOS || Platform.isAndroid) {
@@ -427,8 +434,8 @@ class _Footer extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            onPressed: () => _openPurchase(context),
-            icon: Icon(Icons.credit_card_outlined, size: 22, color: iconColor),
+            onPressed: () => _openAccount(context),
+            icon: Icon(Icons.person_outline, size: 22, color: iconColor),
           ),
           IconButton(
             onPressed: () => context.goNamed('settings'),

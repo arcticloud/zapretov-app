@@ -1,25 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/theme/app_theme_mode.dart';
 import 'package:hiddify/core/theme/theme_preferences.dart';
-import 'package:hiddify/features/purchase/purchase_page.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-
-void _openPurchaseFromSettings(BuildContext context) {
-  if (Platform.isIOS || Platform.isAndroid) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const PurchasePage()),
-    );
-  } else {
-    UriUtils.tryLaunch(Uri.parse(Constants.pricingUrl));
-  }
-}
 
 class SettingsPage extends HookConsumerWidget {
   const SettingsPage({super.key});
@@ -84,10 +70,6 @@ class SettingsPage extends HookConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
                 children: [
-                  // ── Subscription card ──
-                  _SubscriptionCard(isDark: isDark),
-                  const SizedBox(height: 16),
-
                   // ── Connection section ──
                   _SectionLabel(label: 'Подключение', isDark: isDark),
                   const SizedBox(height: 8),
@@ -235,84 +217,6 @@ class SettingsPage extends HookConsumerWidget {
       default:
         return 'Системная';
     }
-  }
-}
-
-class _SubscriptionCard extends StatelessWidget {
-  const _SubscriptionCard({required this.isDark});
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _openPurchaseFromSettings(context),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF00E5A0).withValues(alpha: 0.15),
-              const Color(0xFF00B480).withValues(alpha: 0.08),
-            ],
-          ),
-          border: Border.all(color: const Color(0xFF00E5A0).withValues(alpha: 0.25)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF00E5A0).withValues(alpha: 0.15),
-              ),
-              child: const Icon(Icons.check_circle_outline, color: Color(0xFF00E5A0), size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Базовый план',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : const Color(0xFF1E293B),
-                    ),
-                  ),
-                  Text(
-                    'Активна · до апреля 2026',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF00E5A0),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text(
-                'Продлить',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0a0a0a),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
