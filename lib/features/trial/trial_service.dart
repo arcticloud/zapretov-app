@@ -112,7 +112,7 @@ class TrialNotifier extends StateNotifier<TrialState> {
       client.connectionTimeout = const Duration(seconds: 10);
       final request = await client.postUrl(Uri.parse('$_apiBase/api/trial'));
       request.headers.contentType = ContentType.json;
-      request.write(jsonEncode({'device_id': deviceId}));
+      request.write(jsonEncode({'device_id': deviceId, 'platform': Platform.operatingSystem}));
       final response = await request.close();
       final body = await response.transform(utf8.decoder).join();
       client.close();

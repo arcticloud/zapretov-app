@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
@@ -27,6 +28,22 @@ class ConnectionButton extends HookConsumerWidget {
     final delay = activeProxy.valueOrNull?.urlTestDelay ?? 0;
     final requiresReconnect = ref.watch(configOptionNotifierProvider).valueOrNull;
     final trial = ref.watch(trialProvider);
+
+    // Haptic feedback on connection state changes
+    ref.listen(connectionNotifierProvider, (prev, next) {
+      final prevStatus = prev?.valueOrNull;
+      final nextStatus = next.valueOrNull;
+      if (prevStatus.runtimeType == nextStatus.runtimeType) return;
+
+      if (nextStatus is Connected) {
+        HapticFeedback.heavyImpact();
+      } else if (nextStatus is Disconnected && prevStatus != null) {
+        // тук-тук-тук
+        HapticFeedback.heavyImpact();
+        Future.delayed(const Duration(milliseconds: 100), () => HapticFeedback.heavyImpact());
+        Future.delayed(const Duration(milliseconds: 200), () => HapticFeedback.heavyImpact());
+      }
+    });
 
     final isConnected = connectionStatus.valueOrNull is Connected;
     final isConnecting = connectionStatus.valueOrNull is Connecting;
@@ -69,7 +86,6 @@ class ConnectionButton extends HookConsumerWidget {
 
     final label = switch (connectionStatus) {
       AsyncData(value: Connected()) when requiresReconnect == true => t.connection.reconnect,
-      AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => t.connection.connecting,
       AsyncData(value: final status) => status.present(t),
       _ => "",
     };
@@ -83,7 +99,7 @@ class ConnectionButton extends HookConsumerWidget {
       onTap: onTap,
       enabled: trialBlocked ? false : enabled,
       label: trialBlocked ? 'Лимит исчерпан' : label,
-      isConnected: isConnected && delay > 0 && delay < 65000,
+      isConnected: isConnected,
       isSwitching: isSwitching,
       isTrialBlocked: trialBlocked,
     );
@@ -262,7 +278,7 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
       mainAxisSize: MainAxisSize.min,
       children: [
         GestureDetector(
-          onTap: widget.onTap,
+          onTap: widget.isSwitching ? null : widget.onTap,
           child: SizedBox(
             width: 200,
             height: 200,
@@ -310,9 +326,13 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
                                   ? (isDark
                                       ? const Color.fromRGBO(0, 229, 160, 0.15)
                                       : const Color.fromRGBO(0, 135, 90, 0.12))
-                                  : (isDark
-                                      ? const Color.fromRGBO(255, 59, 48, 0.12)
-                                      : const Color.fromRGBO(255, 59, 48, 0.10)),
+                                  : isSwitching
+                                      ? (isDark
+                                          ? const Color.fromRGBO(255, 193, 7, 0.15)
+                                          : const Color.fromRGBO(255, 193, 7, 0.12))
+                                      : (isDark
+                                          ? const Color.fromRGBO(255, 59, 48, 0.12)
+                                          : const Color.fromRGBO(255, 59, 48, 0.10)),
                           width: 1.5,
                         ),
                       ),
@@ -387,8 +407,8 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
     }
     if (isSwitching) {
       return isDark
-          ? const Color.fromRGBO(0, 229, 160, 0.08)
-          : const Color.fromRGBO(0, 229, 160, 0.10);
+          ? const Color.fromRGBO(255, 193, 7, 0.08)
+          : const Color.fromRGBO(255, 193, 7, 0.10);
     }
     // Disconnected → red
     return isDark
@@ -409,8 +429,8 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
     }
     if (isSwitching) {
       return isDark
-          ? const Color.fromRGBO(0, 229, 160, 0.30)
-          : const Color.fromRGBO(0, 229, 160, 0.40);
+          ? const Color.fromRGBO(255, 193, 7, 0.30)
+          : const Color.fromRGBO(255, 193, 7, 0.40);
     }
     // Disconnected → red
     return isDark
@@ -427,8 +447,8 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
     if (isConnected) return const Color(0xFF00E5A0);
     if (isSwitching) {
       return isDark
-          ? const Color.fromRGBO(0, 229, 160, 0.60)
-          : const Color.fromRGBO(0, 229, 160, 0.70);
+          ? const Color.fromRGBO(255, 193, 7, 0.65)
+          : const Color.fromRGBO(255, 193, 7, 0.75);
     }
     // Disconnected → red at 50%
     return isDark
@@ -476,8 +496,8 @@ class _RelokantConnectionButtonState extends State<_RelokantConnectionButton>
     }
     if (isSwitching) {
       return isDark
-          ? const Color.fromRGBO(0, 229, 160, 0.7)
-          : const Color.fromRGBO(0, 120, 70, 0.7);
+          ? const Color.fromRGBO(255, 193, 7, 0.75)
+          : const Color.fromRGBO(180, 135, 0, 0.8);
     }
     // Disconnected → red tint
     return isDark

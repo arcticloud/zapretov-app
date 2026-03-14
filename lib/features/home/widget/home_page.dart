@@ -9,6 +9,7 @@ import 'package:hiddify/core/theme/theme_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
+import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
 import 'package:hiddify/features/purchase/purchase_page.dart';
@@ -103,6 +104,8 @@ class HomePage extends HookConsumerWidget {
                     const Spacer(),
                     const ConnectionButton(),
                     const Spacer(),
+                    if (trialState.isTrial && trialState.isExpired)
+                      _TrialExpiredBanner(isDark: isDark),
                     _Footer(isDark: isDark),
                   ],
                 ),
@@ -511,13 +514,19 @@ class _DecoCircle extends StatelessWidget {
 
 // ─── Proxy picker ─────────────────────────────────────────
 
-class _ProxyPickerSheet extends ConsumerWidget {
+class _ProxyPickerSheet extends ConsumerStatefulWidget {
   const _ProxyPickerSheet();
 
+  @override
+  ConsumerState<_ProxyPickerSheet> createState() => _ProxyPickerSheetState();
+}
+
+class _ProxyPickerSheetState extends ConsumerState<_ProxyPickerSheet> {
   static const _green = Color(0xFF00E5A0);
+  String? _selectedTag; // null = nothing picked yet (stays on current)
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final proxies = ref.watch(proxiesOverviewNotifierProvider);
     final bg = isDark ? const Color(0xFF09090B) : const Color(0xFFF5F7FA);
@@ -615,7 +624,10 @@ class _ProxyPickerSheet extends ConsumerWidget {
                     child: Column(
                       children: List.generate(indices.length, (j) {
                         final proxy = realServers[indices[j]];
-                        final selected = group?.selected == proxy.tag;
+                        final isCurrentlySelected = group?.selected == proxy.tag;
+                        final isPicked = _selectedTag == null
+                            ? isCurrentlySelected
+                            : _selectedTag == proxy.tag;
                         final countryCode = _LocationSelector._detectCountryCode(proxy);
                         final locationName = _LocationSelector._locationName(proxy, countryCode);
                         final isLast = j == indices.length - 1;
@@ -625,16 +637,11 @@ class _ProxyPickerSheet extends ConsumerWidget {
                               countryCode: countryCode,
                               name: locationName,
                               delay: proxy.urlTestDelay,
-                              selected: selected,
+                              selected: isPicked,
                               isDark: isDark,
                               onTap: group == null
                                   ? null
-                                  : () async {
-                                      await ref
-                                          .read(proxiesOverviewNotifierProvider.notifier)
-                                          .changeProxy(group.tag, proxy.tag);
-                                      if (context.mounted) Navigator.of(context).pop();
-                                    },
+                                  : () => setState(() => _selectedTag = proxy.tag),
                             ),
                             if (!isLast)
                               Divider(height: 1, indent: 64, color: sepColor),
@@ -834,7 +841,88 @@ class _ProxyPickerSheet extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator(color: _green)),
             ),
           ),
+          // ── Confirm button ──
+          _buildConfirmButton(context, isDark),
         ],
+      ),
+    );
+  }
+
+  Widget _buildConfirmButton(BuildContext context, bool isDark) {
+    final proxies = ref.watch(proxiesOverviewNotifierProvider);
+    final group = proxies.valueOrNull;
+    if (group == null) return const SizedBox.shrink();
+
+    final currentTag = group.selected;
+    final hasChange = _selectedTag != null && _selectedTag != currentTag;
+
+    // Find selected server name for button label
+    String? selectedName;
+    if (hasChange) {
+      final server = group.items.where((p) => p.tag == _selectedTag).firstOrNull;
+      if (server != null) {
+        final cc = _LocationSelector._detectCountryCode(server);
+        selectedName = _LocationSelector._locationName(server, cc);
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: AnimatedOpacity(
+            opacity: hasChange ? 1.0 : 0.5,
+            duration: const Duration(milliseconds: 200),
+            child: FilledButton(
+              onPressed: hasChange
+                  ? () async {
+                      final tag = _selectedTag!;
+                      await ref
+                          .read(proxiesOverviewNotifierProvider.notifier)
+                          .changeProxy(group.tag, tag);
+                      if (!context.mounted) return;
+                      Navigator.of(context).pop();
+                      // If VPN is disconnected, start connection
+                      final connStatus = ref.read(connectionNotifierProvider);
+                      if (connStatus.valueOrNull is Disconnected) {
+                        await ref.read(connectionNotifierProvider.notifier).toggleConnection();
+                      }
+                      // Show snackbar
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Переподключение к ${selectedName ?? tag}...'),
+                            duration: const Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        );
+                      }
+                    }
+                  : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: _green,
+                foregroundColor: const Color(0xFF0a0a0a),
+                disabledBackgroundColor: isDark
+                    ? const Color(0xFF27272A)
+                    : const Color(0xFFE2E8F0),
+                disabledForegroundColor: isDark
+                    ? const Color(0xFF52525B)
+                    : const Color(0xFF94A3B8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: Text(
+                hasChange
+                    ? 'Подключить — ${selectedName ?? ''}'
+                    : 'Текущий сервер',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1063,6 +1151,128 @@ class _TrialTimerBar extends StatelessWidget {
   }
 }
 
+// ─── Trial expired banner (persistent on home screen) ─────
+
+class _TrialExpiredBanner extends StatelessWidget {
+  const _TrialExpiredBanner({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF00E5A0).withValues(alpha: 0.08)
+            : const Color(0xFF00E5A0).withValues(alpha: 0.06),
+        border: Border.all(
+          color: const Color(0xFF00E5A0).withValues(alpha: 0.2),
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E5A0).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Center(
+                  child: Text('🔑', style: TextStyle(fontSize: 18)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Пробный период закончился',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Оплатите подписку для безлимитного VPN',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.45)
+                            : const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: FilledButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(builder: (_) => const CodeEntryPage()),
+                      );
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF00E5A0),
+                      foregroundColor: const Color(0xFF0a0a0a),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'У меня есть код',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: OutlinedButton(
+                    onPressed: () => _openPurchase(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: isDark ? Colors.white : const Color(0xFF1E293B),
+                      side: BorderSide(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : const Color(0xFFE2E8F0),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Купить подписку',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── Connected mesh gradient ──────────────────────────────
 
 class _ConnectedMeshGradient extends StatelessWidget {
@@ -1135,14 +1345,14 @@ class _TrialExpiredDialog extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'Лимит исчерпан',
+              'Время вышло',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Вы использовали 10 минут сегодня.\nВозвращайтесь завтра или оформите подписку.',
+              '10 бесплатных минут на сегодня закончились.\nКупите подписку — код для подключения придёт на email.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -1168,6 +1378,30 @@ class _TrialExpiredDialog extends StatelessWidget {
                 child: const Text(
                   'Оформить подписку',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const CodeEntryPage()),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF00E5A0),
+                  side: const BorderSide(color: Color(0xFF00E5A0)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'У меня есть код',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
