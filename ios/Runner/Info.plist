@@ -54,7 +54,7 @@
 			<string>com.apple.appintents-extension</string>
 		</dict>
 		<key>ITSAppUsesNonExemptEncryption</key>
-		<false/>
+		<true/>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<key>SERVICE_IDENTIFIER</key>
