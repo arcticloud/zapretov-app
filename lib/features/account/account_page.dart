@@ -76,6 +76,327 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     launchUrl(Uri.parse(_accountUrl), mode: LaunchMode.externalApplication);
   }
 
+  void _showUpgradeSheet(AccountInfo info) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF18181B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
+    final borderColor = isDark ? const Color(0xFF27272A) : const Color(0xFFE2E8F0);
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+        ),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: subColor.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Сменить тариф',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: textColor),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Текущий: ${info.planName}',
+              style: TextStyle(fontSize: 13, color: subColor),
+            ),
+            const SizedBox(height: 20),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: info.upgrades.map((u) =>
+                  _upgradeCard(u, info, isDark, textColor, subColor, borderColor, ctx),
+                ).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _upgradeCard(
+    UpgradeOption upgrade,
+    AccountInfo info,
+    bool isDark,
+    Color textColor,
+    Color subColor,
+    Color borderColor,
+    BuildContext ctx,
+  ) {
+    final regionLabels = upgrade.regions.map((r) {
+      if (r == 'ru') return 'Россия';
+      if (r == 'eu') return 'Европа';
+      if (r == 'us') return 'США';
+      return r;
+    }).join(' + ');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111113) : const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  upgrade.name,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${upgrade.devices} устр.',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _green),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(regionLabels, style: TextStyle(fontSize: 12, color: subColor)),
+          const SizedBox(height: 12),
+          // Price buttons
+          Row(
+            children: [
+              _priceButton(upgrade.monthly, 'мес', info, isDark, ctx),
+              const SizedBox(width: 8),
+              _priceButton(upgrade.quarterly, '3 мес', info, isDark, ctx),
+              const SizedBox(width: 8),
+              _priceButton(upgrade.yearly, 'год', info, isDark, ctx),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _priceButton(UpgradePlan plan, String label, AccountInfo info, bool isDark, BuildContext ctx) {
+    final priceStr = '\$${(plan.price / 100).toStringAsFixed(plan.price % 100 == 0 ? 0 : 2)}';
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _showPaymentMethodSheet(info.activationCode, plan.key, priceStr, label, ctx),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF18181B) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: _green.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            children: [
+              Text(
+                priceStr,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? _green : const Color(0xFF00B07D),
+                ),
+              ),
+              Text(
+                '/ $label',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showPaymentMethodSheet(String code, String planKey, String price, String period, BuildContext parentCtx) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF18181B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
+    final borderColor = isDark ? const Color(0xFF27272A) : const Color(0xFFE2E8F0);
+
+    showModalBottomSheet<void>(
+      context: parentCtx,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: subColor.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              '$price / $period',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: textColor),
+            ),
+            const SizedBox(height: 4),
+            Text('Выберите способ оплаты', style: TextStyle(fontSize: 13, color: subColor)),
+            const SizedBox(height: 20),
+
+            // Stripe
+            _payMethodTile(
+              icon: Icons.credit_card_rounded,
+              iconColor: const Color(0xFF635BFF),
+              iconBg: isDark ? const Color(0xFF1A1540) : const Color(0xFFF0EEFF),
+              title: 'Зарубежная карта',
+              sub: 'Visa, Mastercard',
+              isDark: isDark,
+              textColor: textColor,
+              subColor: subColor,
+              borderColor: borderColor,
+              onTap: () async {
+                Navigator.pop(ctx);
+                final url = await createCheckoutByCode(code, planKey);
+                if (url != null) {
+                  launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+
+            // Telegram Stars
+            _payMethodTile(
+              icon: Icons.star_rounded,
+              iconColor: const Color(0xFFFFAA00),
+              iconBg: isDark ? const Color(0xFF2A2000) : const Color(0xFFFFF8E6),
+              title: 'Карта РФ',
+              sub: 'Через Telegram Stars',
+              isDark: isDark,
+              textColor: textColor,
+              subColor: subColor,
+              borderColor: borderColor,
+              onTap: () {
+                Navigator.pop(ctx);
+                launchUrl(
+                  Uri.parse('https://t.me/relokant_net_bot?start=pay'),
+                  mode: LaunchMode.externalApplication,
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+
+            // Crypto
+            _payMethodTile(
+              icon: Icons.currency_bitcoin_rounded,
+              iconColor: const Color(0xFFF7931A),
+              iconBg: isDark ? const Color(0xFF2A1A00) : const Color(0xFFFFF3E0),
+              title: 'Криптовалюта',
+              sub: 'BTC, ETH, USDT',
+              isDark: isDark,
+              textColor: textColor,
+              subColor: subColor,
+              borderColor: borderColor,
+              onTap: () {
+                Navigator.pop(ctx);
+                launchUrl(
+                  Uri.parse('https://relokant.net/#pricing'),
+                  mode: LaunchMode.externalApplication,
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _payMethodTile({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required String title,
+    required String sub,
+    required bool isDark,
+    required Color textColor,
+    required Color subColor,
+    required Color borderColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF111113) : const Color(0xFFF8F8F8),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(icon, size: 20, color: iconColor),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: textColor)),
+                  Text(sub, style: TextStyle(fontSize: 12, color: subColor)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, size: 18, color: isDark ? const Color(0xFF333333) : const Color(0xFFCCCCCC)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openPortal() async {
+    if (_code == null) return;
+    final url = await getPortalUrl(_code!);
+    if (url != null) {
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      _openCabinet();
+    }
+  }
+
   void _showReferralSheet(AccountInfo info) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF18181B) : Colors.white;
@@ -415,13 +736,11 @@ class _AccountPageState extends ConsumerState<AccountPage> {
         _buildHeroCard(info, code, isDark, textColor, subColor, cardBg, cardBorder, codeBg),
         const SizedBox(height: 20),
 
-        // Actions section
-        if (info != null) ...[
-          _sectionHeader('Действия', sectionColor),
-          const SizedBox(height: 8),
-          _buildActionsCard(info, isDark, textColor, subColor, cardBg, cardBorder),
-          const SizedBox(height: 20),
-        ],
+        // Actions section (always show — enter code, upgrade, referral)
+        _sectionHeader('Действия', sectionColor),
+        const SizedBox(height: 8),
+        _buildActionsCard(info, isDark, textColor, subColor, cardBg, cardBorder),
+        const SizedBox(height: 20),
 
         // More section
         _sectionHeader('Ещё', sectionColor),
@@ -612,7 +931,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
   }
 
   Widget _buildActionsCard(
-    AccountInfo info,
+    AccountInfo? info,
     bool isDark,
     Color textColor,
     Color subColor,
@@ -621,9 +940,9 @@ class _AccountPageState extends ConsumerState<AccountPage> {
   ) {
     final tiles = <_TileData>[];
 
-    // Show "Enter code" for trial users or expired subscriptions
+    // Show "Enter code" for trial users, expired, or when API failed
     final trialState = ref.read(trialProvider);
-    if (trialState.isTrial || !info.isActive) {
+    if (info == null || trialState.isTrial || !info.isActive) {
       tiles.add(_TileData(
         icon: Icons.key_rounded,
         iconBg: isDark ? const Color(0xFF1A2E1A) : const Color(0xFFF0FFF4),
@@ -634,44 +953,48 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           await Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const CodeEntryPage()),
           );
-          _loadData(); // Reload account info after activation
+          _loadData();
         },
       ));
     }
 
-    if (info.upgrades.isNotEmpty) {
-      final upgradeNames = info.upgrades.map((u) => u.name).join(', ');
-      tiles.add(_TileData(
-        icon: Icons.upgrade_rounded,
-        iconBg: isDark ? const Color(0xFF2E1065) : const Color(0xFFF3F0FF),
-        iconColor: const Color(0xFF8B5CF6),
-        label: 'Сменить тариф',
-        sub: upgradeNames,
-        onTap: _openCabinet,
-      ));
-    }
+    // Buy / upgrade — always show (opens Telegram bot for payment)
+    tiles.add(_TileData(
+      icon: Icons.shopping_cart_rounded,
+      iconBg: isDark ? const Color(0xFF0C2912) : const Color(0xFFECFDF5),
+      iconColor: _green,
+      label: info != null && info.isActive ? 'Сменить тариф' : 'Купить подписку',
+      sub: info != null && info.upgrades.isNotEmpty
+          ? info.upgrades.map((u) => u.name).join(', ')
+          : 'Выбрать тариф и оплатить',
+      onTap: info != null && info.upgrades.isNotEmpty
+          ? () => _showUpgradeSheet(info)
+          : () => launchUrl(Uri.parse('https://t.me/relokant_net_bot?start=pay'), mode: LaunchMode.externalApplication),
+    ));
 
-    if (info.hasStripe) {
+    if (info != null && info.hasStripe) {
       tiles.add(_TileData(
         icon: Icons.credit_card_outlined,
         iconBg: isDark ? const Color(0xFF1C1C1C) : const Color(0xFFF8F8F8),
         iconColor: subColor,
         label: 'Управить подпиской',
         sub: 'Stripe',
-        onTap: _openCabinet,
+        onTap: _openPortal,
       ));
     }
 
-    tiles.add(_TileData(
-      icon: Icons.card_giftcard_rounded,
-      iconBg: isDark ? const Color(0xFF4A0E2B) : const Color(0xFFFDF2F8),
-      iconColor: const Color(0xFFEC4899),
-      label: 'Пригласить друга',
-      sub: info.referralCount > 0
-          ? '${info.referralCount} приглашено · +${info.referralBonusDays} дней'
-          : '+7 дней вам и другу',
-      onTap: () => _showReferralSheet(info),
-    ));
+    if (info != null) {
+      tiles.add(_TileData(
+        icon: Icons.card_giftcard_rounded,
+        iconBg: isDark ? const Color(0xFF4A0E2B) : const Color(0xFFFDF2F8),
+        iconColor: const Color(0xFFEC4899),
+        label: 'Пригласить друга',
+        sub: info.referralCount > 0
+            ? '${info.referralCount} приглашено · +${info.referralBonusDays} дней'
+            : '+7 дней вам и другу',
+        onTap: () => _showReferralSheet(info),
+      ));
+    }
 
     return _buildTileList(tiles, isDark, textColor, subColor, cardBg, cardBorder);
   }

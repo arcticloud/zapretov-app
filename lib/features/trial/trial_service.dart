@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -78,20 +80,59 @@ class TrialNotifier extends StateNotifier<TrialState> {
     );
   }
 
-  String _getDeviceId() {
+  Future<String> _getDeviceId() async {
+    // 1. Fast path: check SharedPreferences cache
     var id = _prefs.getString(_keyDeviceId);
-    if (id == null || id.isEmpty) {
-      id = const Uuid().v4().replaceAll('-', '').substring(0, 32);
+    if (id != null && id.isNotEmpty) return id;
+
+    // 2. Platform-persistent ID (survives app reinstall)
+    id = await _getPersistentDeviceId();
+    if (id != null && id.isNotEmpty) {
       _prefs.setString(_keyDeviceId, id);
+      return id;
     }
+
+    // 3. Generate new UUID, save everywhere
+    id = const Uuid().v4().replaceAll('-', '').substring(0, 32);
+    _prefs.setString(_keyDeviceId, id);
+    await _savePersistentDeviceId(id);
     return id;
+  }
+
+  Future<String?> _getPersistentDeviceId() async {
+    try {
+      if (Platform.isAndroid) {
+        // android_id (SSAID) — stable per device+app signing key, survives reinstall
+        final info = await DeviceInfoPlugin().androidInfo;
+        // SSAID (Settings.Secure.ANDROID_ID) — stable per device+signing key
+        final androidId = info.data['androidId'] as String?;
+        if (androidId != null && androidId.isNotEmpty && androidId != 'unknown') {
+          return androidId;
+        }
+      } else if (Platform.isIOS) {
+        // iOS Keychain — survives reinstall
+        const storage = FlutterSecureStorage();
+        return await storage.read(key: _keyDeviceId);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<void> _savePersistentDeviceId(String id) async {
+    try {
+      if (Platform.isIOS) {
+        const storage = FlutterSecureStorage();
+        await storage.write(key: _keyDeviceId, value: id);
+      }
+      // Android: android_id is read-only, no need to save
+    } catch (_) {}
   }
 
   Future<String?> createTrial() async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final deviceId = _getDeviceId();
+      final deviceId = await _getDeviceId();
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 10);
       final request = await client.postUrl(Uri.parse('$_apiBase/api/trial'));

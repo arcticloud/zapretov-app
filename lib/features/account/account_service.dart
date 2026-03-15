@@ -143,3 +143,45 @@ Future<AccountInfo?> fetchAccountInfo(String code) async {
     return null;
   }
 }
+
+Future<String?> createCheckoutByCode(String code, String planKey) async {
+  try {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
+    final request = await client.postUrl(
+      Uri.parse('$_apiBase/api/checkout-by-code'),
+    );
+    request.headers.contentType = ContentType.json;
+    request.write(jsonEncode({'code': code, 'plan': planKey}));
+    final response = await request.close();
+    final body = await response.transform(utf8.decoder).join();
+    client.close();
+
+    if (response.statusCode != 200) return null;
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    return data['url'] as String?;
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<String?> getPortalUrl(String code) async {
+  try {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
+    final request = await client.postUrl(
+      Uri.parse('$_apiBase/api/customer-portal'),
+    );
+    request.headers.contentType = ContentType.json;
+    request.write(jsonEncode({'code': code}));
+    final response = await request.close();
+    final body = await response.transform(utf8.decoder).join();
+    client.close();
+
+    if (response.statusCode != 200) return null;
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    return data['url'] as String?;
+  } catch (_) {
+    return null;
+  }
+}
