@@ -880,21 +880,14 @@ class _ProxyPickerSheetState extends ConsumerState<_ProxyPickerSheet> {
                           .changeProxy(group.tag, tag);
                       if (!context.mounted) return;
                       Navigator.of(context).pop();
-                      // If VPN is disconnected, start connection
                       final connStatus = ref.read(connectionNotifierProvider);
                       if (connStatus.valueOrNull is Disconnected) {
+                        // If VPN is disconnected, start connection
                         await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-                      }
-                      // Show snackbar
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Переподключение к ${selectedName ?? tag}...'),
-                            duration: const Duration(seconds: 2),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        );
+                      } else if (connStatus.valueOrNull is Connected) {
+                        // If VPN is connected, reconnect to show visual feedback
+                        final profile = await ref.read(activeProfileProvider.future);
+                        await ref.read(connectionNotifierProvider.notifier).reconnect(profile);
                       }
                     }
                   : null,
