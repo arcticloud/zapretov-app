@@ -6,7 +6,6 @@ import 'package:fpdart/fpdart.dart';
 import 'package:grpc/grpc.dart';
 import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/core/model/directories.dart';
-import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
@@ -49,10 +48,9 @@ class HiddifyCoreService with InfraLogger {
           loggy.error(e);
           if (PlatformUtils.isIOS) return;
           statusController.add(const CoreStatus.stopped());
-          // Don't show gRPC unavailable errors to user — core may still be starting
-          if (!e.toString().contains('code: 14')) {
-            ref.read(inAppNotificationControllerProvider).showErrorToast(e);
-          }
+          // Don't show setup errors to user — they're transient startup noise
+          // (gRPC unavailable, gRPC unknown, permission prompts, etc.)
+
         })
         .map((_) {
           loggy.info("Hiddify-core setup done");

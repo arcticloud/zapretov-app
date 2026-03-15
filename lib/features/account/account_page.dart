@@ -76,8 +76,249 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     launchUrl(Uri.parse(_accountUrl), mode: LaunchMode.externalApplication);
   }
 
-  void _shareReferral(String link) {
-    Share.share('Попробуй Relokant VPN — российский IP за 2 минуты!\n$link');
+  void _showReferralSheet(AccountInfo info) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF18181B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subColor = isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8);
+    final borderColor = isDark ? const Color(0xFF27272A) : const Color(0xFFE2E8F0);
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: subColor.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Gift icon
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    _green.withValues(alpha: 0.15),
+                    const Color(0xFF00E5A0).withValues(alpha: 0.05),
+                  ],
+                ),
+                shape: BoxShape.circle,
+                border: Border.all(color: _green.withValues(alpha: 0.2)),
+              ),
+              child: const Icon(Icons.card_giftcard_rounded, size: 28, color: _green),
+            ),
+            const SizedBox(height: 16),
+
+            // Title
+            Text(
+              'Пригласи друга',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Вы оба получите +7 дней бесплатно',
+              style: TextStyle(fontSize: 14, color: subColor),
+            ),
+            const SizedBox(height: 24),
+
+            // Stats row
+            Row(
+              children: [
+                Expanded(
+                  child: _referralStatBox(
+                    icon: Icons.people_alt_rounded,
+                    value: '${info.referralCount}',
+                    label: 'Приглашено',
+                    isDark: isDark,
+                    borderColor: borderColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _referralStatBox(
+                    icon: Icons.calendar_today_rounded,
+                    value: '+${info.referralBonusDays}',
+                    label: 'Бонус дней',
+                    isDark: isDark,
+                    borderColor: borderColor,
+                    valueColor: _green,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Referral link
+            GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: info.referralLink));
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(
+                    content: Text('Ссылка скопирована'),
+                    backgroundColor: _green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF111113) : const Color(0xFFF8F8F8),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        info.referralLink,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: subColor,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        maxLines: 1,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.content_copy_rounded, size: 14, color: isDark ? _green : const Color(0xFF00B07D)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Копировать',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? _green : const Color(0xFF00B07D),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Share button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  Share.share(
+                    'Попробуй Relokant VPN — российский IP за 2 минуты! '
+                    'Скачай приложение и подключись бесплатно на 3 дня.\n'
+                    '${info.referralLink}',
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _green,
+                  foregroundColor: const Color(0xFF0a0a0a),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.share_rounded, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Поделиться с другом',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // How it works
+            Text(
+              'Друг переходит по ссылке, активирует VPN — бонус начисляется обоим автоматически',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: subColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _referralStatBox({
+    required IconData icon,
+    required String value,
+    required String label,
+    required bool isDark,
+    required Color borderColor,
+    Color? valueColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111113) : const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 20, color: valueColor ?? (isDark ? Colors.white70 : const Color(0xFF64748B))),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: valueColor ?? (isDark ? Colors.white : const Color(0xFF1E293B)),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? const Color(0xFF71717A) : const Color(0xFF94A3B8),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatDate(String? dateStr) {
@@ -426,8 +667,10 @@ class _AccountPageState extends ConsumerState<AccountPage> {
       iconBg: isDark ? const Color(0xFF4A0E2B) : const Color(0xFFFDF2F8),
       iconColor: const Color(0xFFEC4899),
       label: 'Пригласить друга',
-      sub: '+7 дней вам и другу',
-      onTap: () => _shareReferral(info.referralLink),
+      sub: info.referralCount > 0
+          ? '${info.referralCount} приглашено · +${info.referralBonusDays} дней'
+          : '+7 дней вам и другу',
+      onTap: () => _showReferralSheet(info),
     ));
 
     return _buildTileList(tiles, isDark, textColor, subColor, cardBg, cardBorder);

@@ -157,13 +157,21 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       ConnectionFailure err,
     ) async {
       loggy.warning("error connecting", err);
-      //Go err is not normal object to see the go errors are string and need to be dumped
-      await ref
-          .read(dialogNotifierProvider.notifier)
-          .showCustomAlertFromErr(err.present(ref.read(translationsProvider).requireValue));
+
+      // Don't show raw technical dialogs for VPN permission errors —
+      // Android will re-prompt automatically on the next connect attempt
+      final errStr = err.toString();
+      final isPermissionError = errStr.contains("permission denied") ||
+          errStr.contains("denied") ||
+          err is MissingVpnPermission;
+      if (!isPermissionError) {
+        await ref
+            .read(dialogNotifierProvider.notifier)
+            .showCustomAlertFromErr(err.present(ref.read(translationsProvider).requireValue));
+      }
       loggy.warning(err);
-      if (err.toString().contains("panic")) {
-        await Sentry.captureException(Exception(err.toString()));
+      if (errStr.contains("panic")) {
+        await Sentry.captureException(Exception(errStr));
       }
       await ref.read(Preferences.startedByUser.notifier).update(false);
       state = AsyncError(err, StackTrace.current);
