@@ -131,7 +131,7 @@ jobs:
         if: env.HAS_IOS_SIGNING == 'true'
         run: |
           # Build Flutter iOS app (archive only, no export yet)
-          flutter build ios --no-codesign --dart-define sentry_dsn= --dart-define FLUTTER_BUILD_NAME=4.0.5 --dart-define FLUTTER_BUILD_NUMBER=40005
+          flutter build ios --no-codesign --dart-define sentry_dsn= --dart-define FLUTTER_BUILD_NAME=4.0.6 --dart-define FLUTTER_BUILD_NUMBER=40006
 
           # Archive with Xcode using automatic signing + API key
           xcodebuild -workspace ios/Runner.xcworkspace \
