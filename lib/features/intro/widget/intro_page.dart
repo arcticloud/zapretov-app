@@ -1,434 +1,734 @@
-import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
-import 'package:hiddify/core/analytics/analytics_controller.dart';
-import 'package:hiddify/core/http_client/dio_http_client.dart';
-import 'package:hiddify/core/localization/locale_preferences.dart';
-import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/model/constants.dart';
-import 'package:hiddify/core/model/region.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
-import 'package:hiddify/features/common/general_pref_tiles.dart';
-import 'package:hiddify/features/settings/data/config_option_repository.dart';
-import 'package:hiddify/features/settings/widget/preference_tile.dart';
+import 'package:hiddify/features/profile/data/profile_data_providers.dart';
+import 'package:hiddify/features/profile/model/profile_entity.dart';
+import 'package:hiddify/features/profile/model/profile_failure.dart';
+import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class IntroPage extends HookConsumerWidget with PresLogger {
   const IntroPage({super.key});
 
-  static bool locationInfoLoaded = false;
+  static const _serverBase = 'https://api.relokant.net';
 
-  // for focus management
-  KeyEventResult _handleKeyEvent(KeyEvent event, String key) {
-    if (KeyboardConst.select.contains(event.logicalKey) && event is KeyUpEvent) {
-      UriUtils.tryLaunch(Uri.parse(IntroConst.url[key]!));
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
-  }
+  static const _green = Color(0xFF00E5A0);
+  static const _dark = Color(0xFF0a0a0a);
+  static const _surface = Color(0xFF141414);
+  static const _border = Color(0xFF222222);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final t = ref.watch(translationsProvider).requireValue;
-    final theme = Theme.of(context);
+    final isTrialLoading = useState(false);
+    final errorText = useState<String?>(null);
 
-    final isStarting = useState(false);
+    Future<void> activateWithCode(String code) async {
+      try {
+        final subUrl = '$_serverBase/activate/$code';
+        final profileRepo = ref.read(profileRepositoryProvider).requireValue;
+        final result = await profileRepo
+            .upsertRemote(subUrl, userOverride: UserOverride(name: 'Relokant'))
+            .run();
 
-    if (!locationInfoLoaded) {
-      autoSelectRegion(ref).then((value) => loggy.debug("Auto Region selection finished!"));
-      locationInfoLoaded = true;
+        result.match(
+          (failure) {
+            isTrialLoading.value = false;
+            if (failure is ProfileInvalidUrlFailure) {
+              errorText.value = 'Invalid activation code';
+            } else {
+              errorText.value = 'Connection error. Try again.';
+            }
+            loggy.warning('Activation failed: $failure');
+          },
+          (_) async {
+            loggy.info('Activation successful');
+            await ref.read(Preferences.introCompleted.notifier).update(true);
+          },
+        );
+      } catch (e) {
+        isTrialLoading.value = false;
+        errorText.value = 'Connection error. Try again.';
+        loggy.error('Activation error', e);
+      }
     }
 
-    // for focus management
-    final focusStates = <String, ValueNotifier<bool>>{
-      IntroConst.termsAndConditionsKey: useState<bool>(false),
-      IntroConst.githubKey: useState<bool>(false),
-      IntroConst.licenseKey: useState<bool>(false),
-    };
-    final focusNodes = <String, FocusNode>{
-      IntroConst.termsAndConditionsKey: useFocusNode(),
-      IntroConst.githubKey: useFocusNode(),
-      IntroConst.licenseKey: useFocusNode(),
-    };
-    useEffect(() {
-      for (final entry in focusNodes.entries) {
-        entry.value.addListener(() => focusStates[entry.key]!.value = entry.value.hasPrimaryFocus);
+    Future<void> startTrial() async {
+      isTrialLoading.value = true;
+      errorText.value = null;
+
+      final trial = ref.read(trialProvider.notifier);
+      final code = await trial.createTrial();
+
+      if (code == null) {
+        isTrialLoading.value = false;
+        errorText.value =
+            ref.read(trialProvider).error ?? 'Failed to create trial';
+        return;
       }
-      return null;
-    }, []);
+
+      isTrialLoading.value = false;
+      await activateWithCode(code);
+    }
 
     return Scaffold(
+      backgroundColor: _dark,
       body: Center(
-        child: ScrollConfiguration(
-          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-          child: SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 620),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final width = constraints.maxWidth > IntroConst.maxwidth
-                          ? IntroConst.maxwidth
-                          : constraints.maxWidth;
-                      final size = width * 0.4;
-                      return Assets.images.logo.svg(width: size, height: size);
-                    },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Logo
+                Assets.images.logo.svg(
+                  width: 72,
+                  height: 72,
+                  colorFilter:
+                      const ColorFilter.mode(_green, BlendMode.srcIn),
+                ),
+                const Gap(20),
+
+                // Relokant VPN
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    const Text(
+                      'Relokant',
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'VPN',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: _green,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ],
+                ),
+                const Gap(6),
+
+                // Subtitle
+                Text(
+                  'Secure access to Russian services\nfrom abroad',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.white.withValues(alpha: 0.4),
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const Gap(40),
+
+                // Error
+                if (errorText.value != null) ...[
+                  Text(
+                    errorText.value!,
+                    style: const TextStyle(color: Color(0xFFFF6B6B), fontSize: 14),
+                    textAlign: TextAlign.center,
                   ),
                   const Gap(16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      t.intro.banner,
-                      style: theme.textTheme.bodyLarge,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const Gap(24),
-                  const LocalePrefTile(),
-                  ChoicePreferenceWidget(
-                    selected: ref.watch(ConfigOptions.region),
-                    preferences: ref.watch(ConfigOptions.region.notifier),
-                    choices: Region.values,
-                    title: t.pages.settings.routing.region,
-                    showFlag: true,
-                    icon: Icons.place_rounded,
-                    presentChoice: (value) => value.present(t),
-                    onChanged: (val) async {
-                      await ref.read(ConfigOptions.directDnsAddress.notifier).reset();
-                    },
-                  ),
-                  const EnableAnalyticsPrefTile(),
-                  const Gap(24),
-                  Focus(
-                    focusNode: focusNodes[IntroConst.termsAndConditionsKey],
-                    onKeyEvent: (node, event) => _handleKeyEvent(event, IntroConst.termsAndConditionsKey),
-                    child: Text.rich(
-                      t.intro.termsAndPolicyCaution(
-                        tap: (text) => TextSpan(
-                          text: text,
-                          style: TextStyle(
-                            color: focusStates[IntroConst.termsAndConditionsKey]!.value ? Colors.green : Colors.blue,
-                          ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async {
-                              await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
-                            },
-                        ),
-                      ),
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ),
-                  const Gap(8),
-                  Focus(
-                    focusNode: focusNodes[IntroConst.githubKey],
-                    onKeyEvent: (node, event) => _handleKeyEvent(event, IntroConst.githubKey),
-                    child: Text.rich(
-                      t.intro.info(
-                        tap_source: (text) => TextSpan(
-                          text: text,
-                          style: TextStyle(
-                            color: focusStates[IntroConst.githubKey]!.value ? Colors.green : Colors.blue,
-                          ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async {
-                              await UriUtils.tryLaunch(Uri.parse(Constants.githubUrl));
-                            },
-                        ),
-                        tap_license: (text) => TextSpan(
-                          text: text,
-                          style: TextStyle(
-                            color: focusStates[IntroConst.githubKey]!.value ? Colors.green : Colors.blue,
-                          ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async {
-                              await UriUtils.tryLaunch(Uri.parse(Constants.licenseUrl));
-                            },
-                        ),
-                      ),
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ),
-                  // only for managing license node focus
-                  Focus(
-                    focusNode: focusNodes[IntroConst.licenseKey],
-                    onKeyEvent: (node, event) => _handleKeyEvent(event, IntroConst.licenseKey),
-                    child: const Gap(88),
-                  ),
                 ],
-              ),
+
+                // PRIMARY: Connect (trial)
+                SizedBox(
+                  width: double.infinity,
+                  height: 64,
+                  child: FilledButton(
+                    onPressed: isTrialLoading.value ? null : startTrial,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _green,
+                      foregroundColor: _dark,
+                      disabledBackgroundColor: _green.withValues(alpha: 0.4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: isTrialLoading.value
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: _dark,
+                            ),
+                          )
+                        : const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Try for free',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                '3 days \u00B7 1 GB/day \u00B7 all servers',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                const Gap(32),
+
+                // TERTIARY: Buy + Enter code
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () => launchUrl(
+                        Uri.parse('https://relokant.net/#pricing'),
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white.withValues(alpha: 0.4),
+                        textStyle: const TextStyle(fontSize: 13),
+                      ),
+                      child: const Text('Buy subscription'),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        '\u00B7',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const CodeEntryPage(),
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white.withValues(alpha: 0.4),
+                        textStyle: const TextStyle(fontSize: 13),
+                      ),
+                      child: const Text('Enter code'),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        icon: isStarting.value
-            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator())
-            : const Icon(Icons.rocket_launch),
-        label: Text(t.common.start, style: theme.textTheme.titleMedium),
-        onPressed: () async {
-          if (isStarting.value) return;
-          isStarting.value = true;
-          if (!ref.read(analyticsControllerProvider).requireValue) {
-            loggy.info("disabling analytics per user request");
-            try {
-              await ref.read(analyticsControllerProvider.notifier).disableAnalytics();
-            } catch (error, stackTrace) {
-              loggy.error("could not disable analytics", error, stackTrace);
+    );
+  }
+}
+
+// ================================================================
+// Code Entry Page -- standalone page for activation code + email
+// ================================================================
+
+class CodeEntryPage extends HookConsumerWidget with PresLogger {
+  const CodeEntryPage({super.key, this.initialCode});
+
+  final String? initialCode;
+
+  static const _serverBase = 'https://api.relokant.net';
+
+  static const _green = Color(0xFF00E5A0);
+  static const _dark = Color(0xFF0a0a0a);
+  static const _surface = Color(0xFF141414);
+  static const _border = Color(0xFF222222);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final codeController = useTextEditingController(text: initialCode ?? '');
+    final emailController = useTextEditingController();
+    final isLoading = useState(false);
+    final errorText = useState<String?>(null);
+    final showEmailForm = useState(false);
+    final emailSent = useState(false);
+
+    Future<void> activateWithCode(String code) async {
+      isLoading.value = true;
+      errorText.value = null;
+
+      try {
+        final subUrl = '$_serverBase/activate/$code';
+        final profileRepo = ref.read(profileRepositoryProvider).requireValue;
+        final result = await profileRepo
+            .upsertRemote(subUrl, userOverride: UserOverride(name: 'Relokant'))
+            .run();
+
+        result.match(
+          (failure) {
+            isLoading.value = false;
+            if (failure is ProfileInvalidUrlFailure) {
+              errorText.value = 'Invalid activation code';
+            } else {
+              errorText.value = 'Connection error. Try again.';
             }
-          }
-          await ref.read(Preferences.introCompleted.notifier).update(true);
-        },
+            loggy.warning('Activation failed: $failure');
+          },
+          (_) async {
+            loggy.info('Activation successful');
+            ref.read(trialProvider.notifier).clearTrial();
+            await ref.read(Preferences.introCompleted.notifier).update(true);
+            if (context.mounted && Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
+        );
+      } catch (e) {
+        isLoading.value = false;
+        errorText.value = 'Connection error. Try again.';
+        loggy.error('Activation error', e);
+      }
+    }
+
+    Future<void> activate() async {
+      final code = codeController.text.trim().toUpperCase();
+      if (code.isEmpty) {
+        errorText.value = 'Enter activation code';
+        return;
+      }
+      await activateWithCode(code);
+    }
+
+    Future<void> sendRecoveryEmail() async {
+      final email = emailController.text.trim().toLowerCase();
+      if (email.isEmpty || !email.contains('@')) {
+        errorText.value = 'Enter a valid email';
+        return;
+      }
+
+      isLoading.value = true;
+      errorText.value = null;
+
+      try {
+        final client = HttpClient();
+        client.connectionTimeout = const Duration(seconds: 10);
+        final request = await client.postUrl(
+          Uri.parse('$_serverBase/api/recover'),
+        );
+        request.headers.contentType = ContentType.json;
+        request.write(jsonEncode({'email': email}));
+        final response = await request.close();
+        await response.transform(utf8.decoder).join();
+        client.close();
+
+        isLoading.value = false;
+
+        if (response.statusCode == 200) {
+          emailSent.value = true;
+        } else {
+          errorText.value = 'Error. Try later.';
+        }
+      } catch (e) {
+        isLoading.value = false;
+        errorText.value = 'Network error: $e';
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: _dark,
+      appBar: AppBar(
+        backgroundColor: _dark,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: emailSent.value
+                  ? _buildEmailSentView(context, showEmailForm, emailSent)
+                  : showEmailForm.value
+                      ? _buildEmailForm(
+                          emailController,
+                          isLoading,
+                          errorText,
+                          showEmailForm,
+                          sendRecoveryEmail,
+                        )
+                      : _buildCodeForm(
+                          codeController,
+                          isLoading,
+                          errorText,
+                          showEmailForm,
+                          activate,
+                        ),
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Future<void> autoSelectRegion(WidgetRef ref) async {
-    try {
-      final countryCode = RegionDetector.detect();
-      final regionLocale = _getRegionLocale(countryCode);
-      loggy.debug('Timezone Region: ${regionLocale.region} Locale: ${regionLocale.locale}');
-      await ref.read(ConfigOptions.region.notifier).update(regionLocale.region);
-      await ref.watch(ConfigOptions.directDnsAddress.notifier).reset();
-      await ref.read(localePreferencesProvider.notifier).changeLocale(regionLocale.locale);
-      return;
-    } catch (e) {
-      loggy.warning('Could not get the local country code based on timezone', e);
-    }
+  Widget _buildCodeForm(
+    TextEditingController codeController,
+    ValueNotifier<bool> isLoading,
+    ValueNotifier<String?> errorText,
+    ValueNotifier<bool> showEmailForm,
+    VoidCallback onActivate,
+  ) {
+    return Column(
+      key: const ValueKey('code'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.key_rounded, size: 36, color: _green),
+        const Gap(16),
+        const Text(
+          'Enter code',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        const Gap(8),
+        Text(
+          'Enter the 8-character code from\nemail or Telegram bot',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.white.withValues(alpha: 0.4),
+            height: 1.5,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const Gap(32),
 
-    try {
-      final DioHttpClient client = DioHttpClient(
-        timeout: const Duration(seconds: 2),
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
-        debug: true,
-      );
-      final response = await client.get<Map<String, dynamic>>('https://api.ip.sb/geoip/');
+        // Code input
+        TextField(
+          controller: codeController,
+          textAlign: TextAlign.center,
+          textCapitalization: TextCapitalization.characters,
+          style: const TextStyle(
+            fontSize: 22,
+            letterSpacing: 8,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+            LengthLimitingTextInputFormatter(8),
+          ],
+          decoration: InputDecoration(
+            hintText: 'AB3K9F2X',
+            hintStyle: TextStyle(
+              letterSpacing: 8,
+              color: Colors.white.withValues(alpha: 0.15),
+            ),
+            filled: true,
+            fillColor: _surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: _border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: _border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: _green, width: 1.5),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            errorText: errorText.value,
+            errorStyle: const TextStyle(color: Color(0xFFFF6B6B)),
+          ),
+          cursorColor: _green,
+          onSubmitted: (_) => onActivate(),
+        ),
+        const Gap(20),
 
-      if (response.statusCode == 200) {
-        final jsonData = response.data!;
-        final regionLocale = _getRegionLocale(jsonData['country_code']?.toString() ?? "");
+        // Activate button
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: FilledButton(
+            onPressed: isLoading.value ? null : onActivate,
+            style: FilledButton.styleFrom(
+              backgroundColor: _green,
+              foregroundColor: _dark,
+              disabledBackgroundColor: _green.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: isLoading.value
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: _dark,
+                    ),
+                  )
+                : const Text(
+                    'Activate',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+          ),
+        ),
+        const Gap(20),
 
-        loggy.debug('Region: ${regionLocale.region} Locale: ${regionLocale.locale}');
-        await ref.read(ConfigOptions.region.notifier).update(regionLocale.region);
-        await ref.read(localePreferencesProvider.notifier).changeLocale(regionLocale.locale);
-      } else {
-        loggy.warning('Request failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      loggy.warning('Could not get the local country code from ip');
-    }
+        // Divider
+        Row(
+          children: [
+            Expanded(child: Divider(color: _border)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'forgot code?',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.25),
+                ),
+              ),
+            ),
+            Expanded(child: Divider(color: _border)),
+          ],
+        ),
+        const Gap(20),
+
+        // Email recovery link
+        TextButton.icon(
+          onPressed: () => showEmailForm.value = true,
+          style: TextButton.styleFrom(foregroundColor: _green),
+          icon: const Icon(Icons.email_outlined, size: 18),
+          label: const Text(
+            'Send code to email',
+            style: TextStyle(fontSize: 15),
+          ),
+        ),
+        const Gap(4),
+        Text(
+          'If you purchased -- code will be sent to your email',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withValues(alpha: 0.25),
+          ),
+        ),
+      ],
+    );
   }
 
-  RegionLocale _getRegionLocale(String country) {
-    switch (country.toUpperCase()) {
-      case "IR":
-        return RegionLocale(Region.ir, AppLocale.fa);
-      case "CN":
-        return RegionLocale(Region.cn, AppLocale.zhCn);
-      case "RU":
-        return RegionLocale(Region.ru, AppLocale.ru);
-      case "AF":
-        return RegionLocale(Region.af, AppLocale.fa);
-      case "BR":
-        return RegionLocale(Region.br, AppLocale.ptBr);
-      case "TR":
-        return RegionLocale(Region.tr, AppLocale.tr);
-      default:
-        return RegionLocale(Region.other, AppLocale.en);
-    }
-  }
-}
+  Widget _buildEmailForm(
+    TextEditingController emailController,
+    ValueNotifier<bool> isLoading,
+    ValueNotifier<String?> errorText,
+    ValueNotifier<bool> showEmailForm,
+    VoidCallback onSend,
+  ) {
+    return Column(
+      key: const ValueKey('email'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.email_outlined, size: 36, color: _green),
+        const Gap(16),
+        const Text(
+          'Get code',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        const Gap(8),
+        Text(
+          'Enter the email used for\nyour subscription',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.white.withValues(alpha: 0.4),
+            height: 1.5,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const Gap(32),
 
-class RegionLocale {
-  final Region region;
-  final AppLocale locale;
+        // Email input
+        TextField(
+          controller: emailController,
+          textAlign: TextAlign.center,
+          keyboardType: TextInputType.emailAddress,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.white,
+          ),
+          decoration: InputDecoration(
+            hintText: 'your@email.com',
+            hintStyle: TextStyle(
+              color: Colors.white.withValues(alpha: 0.15),
+            ),
+            filled: true,
+            fillColor: _surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _green, width: 1.5),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            errorText: errorText.value,
+            errorStyle: const TextStyle(color: Color(0xFFFF6B6B)),
+          ),
+          cursorColor: _green,
+          onSubmitted: (_) => onSend(),
+        ),
+        const Gap(16),
 
-  RegionLocale(this.region, this.locale);
-}
+        // Send button
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: FilledButton(
+            onPressed: isLoading.value ? null : onSend,
+            style: FilledButton.styleFrom(
+              backgroundColor: _green,
+              foregroundColor: _dark,
+              disabledBackgroundColor: _green.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: isLoading.value
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: _dark,
+                    ),
+                  )
+                : const Text(
+                    'Send',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+          ),
+        ),
+        const Gap(16),
 
-class RegionDetector {
-  /// Returns: 'IR' | 'AF' | 'CN' | 'TR' | 'RU' | 'BR' | 'US'
-  static String detect() {
-    final now = DateTime.now();
-    final offset = now.timeZoneOffset.inMinutes;
-    final tz = now.timeZoneName.toLowerCase().trim();
+        Text(
+          'Code will be sent to the specified email.\nCheck your Spam folder.',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withValues(alpha: 0.25),
+            height: 1.5,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const Gap(24),
 
-    if (offset == 210) return 'IR';
-
-    if (offset == 270) {
-      final (_, country) = _parseLocale();
-      return country == 'IR' ? 'IR' : 'AF';
-    }
-
-    final fromName = _fromTzName(tz, offset);
-    if (fromName != null) return fromName;
-
-    final candidates = _candidatesForOffset(offset);
-    if (candidates.isEmpty) return 'US';
-
-    return _resolveByLocale(candidates);
-  }
-
-  static String? _fromTzName(String tz, int offset) {
-    if (tz.contains('/')) {
-      final city = tz.split('/').last.replaceAll(' ', '_');
-      final r = _ianaCities[city];
-      if (r != null) return r;
-    }
-
-    if (tz == 'irst' || tz == 'irdt' || tz.contains('iran')) return 'IR';
-
-    if (tz == 'aft' || tz.contains('afghanistan')) return 'AF';
-
-    if (tz == 'trt' || tz.contains('turkey') || tz.contains('istanbul')) {
-      return 'TR';
-    }
-
-    if (tz.contains('china') || tz.contains('beijing')) return 'CN';
-    if (tz == 'cst' && offset == 480) return 'CN';
-
-    if (_matchesRussiaTz(tz)) return 'RU';
-
-    if (_matchesBrazilTz(tz)) return 'BR';
-
-    return null;
-  }
-
-  static bool _matchesRussiaTz(String tz) {
-    if (tz.contains('russia') || tz.contains('moscow')) return true;
-
-    const abbrs = {'msk', 'yekt', 'omst', 'krat', 'irkt', 'yakt', 'vlat', 'magt', 'pett', 'sakt', 'sret'};
-    if (abbrs.contains(tz)) return true;
-
-    const winKeys = [
-      'ekaterinburg',
-      'kaliningrad',
-      'yakutsk',
-      'vladivostok',
-      'magadan',
-      'sakhalin',
-      'kamchatka',
-      'astrakhan',
-      'saratov',
-      'volgograd',
-      'altai',
-      'tomsk',
-      'transbaikal',
-      'n. central asia',
-      'north asia',
-    ];
-    return winKeys.any(tz.contains);
-  }
-
-  static bool _matchesBrazilTz(String tz) {
-    if (tz == 'brt' || tz == 'brst') return true;
-    if (tz.contains('brazil') || tz.contains('brasilia')) return true;
-
-    const winKeys = ['e. south america', 'central brazilian', 'tocantins', 'bahia'];
-    return winKeys.any(tz.contains);
-  }
-
-  static Set<String> _candidatesForOffset(int offset) {
-    final c = <String>{};
-
-    if (offset == 180) c.add('TR');
-
-    if (offset == 480) c.add('CN');
-
-    if (_ruOffsets.contains(offset)) c.add('RU');
-
-    if (_brOffsets.contains(offset)) c.add('BR');
-
-    return c;
-  }
-
-  static const _ruOffsets = {120, 180, 240, 300, 360, 420, 480, 540, 600, 660, 720};
-
-  static const _brOffsets = {-120, -180, -240, -300};
-
-  static String _resolveByLocale(Set<String> candidates) {
-    final (lang, country) = _parseLocale();
-
-    if (country != null && candidates.contains(country)) {
-      return country;
-    }
-
-    final regionFromLang = _langToRegion[lang];
-    if (regionFromLang != null && candidates.contains(regionFromLang)) {
-      return regionFromLang;
-    }
-
-    return 'US';
+        // Back to code entry
+        TextButton(
+          onPressed: () {
+            showEmailForm.value = false;
+            errorText.value = null;
+          },
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white.withValues(alpha: 0.4),
+          ),
+          child: const Text('\u2190 Enter code manually'),
+        ),
+      ],
+    );
   }
 
-  static (String, String?) _parseLocale() {
-    try {
-      final parts = Platform.localeName.split(RegExp(r'[_\-.]'));
-      final lang = parts.first.toLowerCase();
-
-      String? country;
-      for (final p in parts.skip(1)) {
-        if (p.length == 2) {
-          country = p.toUpperCase();
-          break;
-        }
-      }
-
-      return (lang, country);
-    } catch (_) {
-      return ('en', null);
-    }
+  Widget _buildEmailSentView(
+    BuildContext context,
+    ValueNotifier<bool> showEmailForm,
+    ValueNotifier<bool> emailSent,
+  ) {
+    return Column(
+      key: const ValueKey('sent'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: _green,
+          ),
+          child: const Icon(Icons.check, size: 32, color: _dark),
+        ),
+        const Gap(16),
+        const Text(
+          'Code sent!',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        const Gap(8),
+        Text(
+          'Check your email and enter\nthe code on the previous screen',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.white.withValues(alpha: 0.4),
+            height: 1.5,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const Gap(32),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: FilledButton(
+            onPressed: () {
+              emailSent.value = false;
+              showEmailForm.value = false;
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: _green,
+              foregroundColor: _dark,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: const Text(
+              'Enter code',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+      ],
+    );
   }
-
-  static const _langToRegion = <String, String>{'fa': 'IR', 'ps': 'AF', 'tr': 'TR', 'zh': 'CN', 'ru': 'RU', 'pt': 'BR'};
-
-  static const _ianaCities = <String, String>{
-    'tehran': 'IR',
-    'kabul': 'AF',
-    'istanbul': 'TR',
-    'shanghai': 'CN',
-    'chongqing': 'CN',
-    'urumqi': 'CN',
-    'harbin': 'CN',
-    'moscow': 'RU',
-    'kaliningrad': 'RU',
-    'samara': 'RU',
-    'yekaterinburg': 'RU',
-    'omsk': 'RU',
-    'novosibirsk': 'RU',
-    'barnaul': 'RU',
-    'tomsk': 'RU',
-    'krasnoyarsk': 'RU',
-    'irkutsk': 'RU',
-    'chita': 'RU',
-    'yakutsk': 'RU',
-    'vladivostok': 'RU',
-    'magadan': 'RU',
-    'sakhalin': 'RU',
-    'kamchatka': 'RU',
-    'anadyr': 'RU',
-    'volgograd': 'RU',
-    'saratov': 'RU',
-    'astrakhan': 'RU',
-    'sao_paulo': 'BR',
-    'fortaleza': 'BR',
-    'recife': 'BR',
-    'manaus': 'BR',
-    'belem': 'BR',
-    'cuiaba': 'BR',
-    'bahia': 'BR',
-    'rio_branco': 'BR',
-    'noronha': 'BR',
-    'porto_velho': 'BR',
-    'campo_grande': 'BR',
-  };
 }

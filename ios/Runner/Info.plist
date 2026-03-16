@@ -9,7 +9,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Hiddify</string>
+	<string>Relokant VPN</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -40,7 +40,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.hiddify.ios</string>
+			<string>net.relokant.vpn</string>
 		</dict>
 	</array>
 	<key>FlutterDeepLinkingEnabled</key>
@@ -59,7 +59,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs camera access to scan QR codes</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app needs photos access to get QR code from photo library</string>
+	<string>Relokant may need access to your photo library to save QR codes or configuration files.</string>
 	<key>SERVICE_IDENTIFIER</key>
 	<string>$(SERVICE_IDENTIFIER)</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

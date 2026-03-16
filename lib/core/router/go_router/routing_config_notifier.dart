@@ -9,6 +9,7 @@ import 'package:hiddify/core/router/go_router/refresh_listenable.dart';
 import 'package:hiddify/features/about/widget/about_page.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
+// CodeEntryPage is exported from intro_page.dart
 import 'package:hiddify/features/log/overview/logs_page.dart';
 import 'package:hiddify/features/per_app_proxy/overview/per_app_proxy_page.dart';
 import 'package:hiddify/features/profile/details/profile_details_page.dart';
@@ -65,6 +66,43 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
       redirect: (context, state) {
         final introCompleted = ref.read(Preferences.introCompleted);
         final isIntro = state.matchedLocation == '/intro';
+
+        // Handle relokant://activate/CODE deep links
+        String? activationCode;
+        final rawUri = state.uri.toString();
+        if (rawUri.startsWith('relokant://activate/')) {
+          activationCode = rawUri.replaceFirst('relokant://activate/', '');
+          if (activationCode.contains('?')) {
+            activationCode = activationCode.split('?').first;
+          }
+        }
+        // Also check desktop app links
+        if (activationCode == null && PlatformUtils.isDesktop && newUrlFromAppLink.isNotEmpty) {
+          final link = newUrlFromAppLink;
+          if (link.startsWith('relokant://activate/')) {
+            activationCode = link.replaceFirst('relokant://activate/', '');
+            newUrlFromAppLink = '';
+          }
+        }
+        if (activationCode != null && activationCode.isNotEmpty) {
+          // Navigate to intro page with pre-filled code for activation
+          if (!introCompleted) {
+            return '/intro?code=$activationCode';
+          }
+          // Already past intro: push code entry page via post-frame callback
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final ctx = GoRouter.of(context).routerDelegate.navigatorKey.currentContext;
+            if (ctx != null) {
+              Navigator.of(ctx).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => CodeEntryPage(initialCode: activationCode),
+                ),
+              );
+            }
+          });
+          return '/home';
+        }
+
         // fix path-parameters for deep link
         String? url;
         if (LinkParser.protocols.contains(state.uri.scheme)) {
