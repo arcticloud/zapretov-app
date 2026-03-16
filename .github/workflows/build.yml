@@ -2,7 +2,7 @@ name: Build Relokant
 
 on:
   push:
-    branches: [main, 'feature/**']
+    branches: [main, 'feature/**', 'fresh-fork']
   workflow_dispatch:
 
 env:
