@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -79,14 +81,51 @@ class TrialNotifier extends StateNotifier<TrialState> {
   }
 
   Future<String> _getDeviceId() async {
-    // Check SharedPreferences cache
+    // 1. Fast path: check SharedPreferences cache
     var id = _prefs.getString(_keyDeviceId);
     if (id != null && id.isNotEmpty) return id;
 
-    // Generate new UUID
+    // 2. Platform-persistent ID (survives app reinstall)
+    id = await _getPersistentDeviceId();
+    if (id != null && id.isNotEmpty) {
+      _prefs.setString(_keyDeviceId, id);
+      return id;
+    }
+
+    // 3. Generate new UUID, save everywhere
     id = const Uuid().v4().replaceAll('-', '').substring(0, 32);
     _prefs.setString(_keyDeviceId, id);
+    await _savePersistentDeviceId(id);
     return id;
+  }
+
+  Future<String?> _getPersistentDeviceId() async {
+    try {
+      if (Platform.isAndroid) {
+        // android_id (SSAID) — stable per device+app signing key, survives reinstall
+        final info = await DeviceInfoPlugin().androidInfo;
+        // SSAID (Settings.Secure.ANDROID_ID) — stable per device+signing key
+        final androidId = info.data['androidId'] as String?;
+        if (androidId != null && androidId.isNotEmpty && androidId != 'unknown') {
+          return androidId;
+        }
+      } else if (Platform.isIOS) {
+        // iOS Keychain — survives reinstall
+        const storage = FlutterSecureStorage();
+        return await storage.read(key: _keyDeviceId);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<void> _savePersistentDeviceId(String id) async {
+    try {
+      if (Platform.isIOS) {
+        const storage = FlutterSecureStorage();
+        await storage.write(key: _keyDeviceId, value: id);
+      }
+      // Android: android_id is read-only, no need to save
+    } catch (_) {}
   }
 
   Future<String?> createTrial() async {
@@ -104,7 +143,7 @@ class TrialNotifier extends StateNotifier<TrialState> {
       client.close();
 
       if (response.statusCode != 200) {
-        state = state.copyWith(isLoading: false, error: 'Failed to create trial');
+        state = state.copyWith(isLoading: false, error: 'Не удалось создать пробный доступ');
         return null;
       }
 
@@ -113,7 +152,7 @@ class TrialNotifier extends StateNotifier<TrialState> {
       final expiresAtStr = data['expires_at'] as String?;
 
       if (code == null || code.isEmpty) {
-        state = state.copyWith(isLoading: false, error: 'Server error');
+        state = state.copyWith(isLoading: false, error: 'Ошибка сервера');
         return null;
       }
 
@@ -134,7 +173,7 @@ class TrialNotifier extends StateNotifier<TrialState> {
 
       return code;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Network error: $e');
+      state = state.copyWith(isLoading: false, error: 'Ошибка сети: $e');
       return null;
     }
   }
