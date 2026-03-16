@@ -10,6 +10,7 @@ import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/proxy/data/proxy_data_providers.dart';
 import 'package:hiddify/features/proxy/model/proxy_failure.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
+import 'dart:convert';
 import 'package:hiddify/hiddifycore/init_signal.dart';
 import 'package:hiddify/utils/riverpod_utils.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -56,16 +57,13 @@ class ProxiesSortNotifier extends _$ProxiesSortNotifier with AppLogger {
 
 @riverpod
 class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
-  static const _cacheKey = 'cached_server_list';
-  static const _selectedCacheKey = 'cached_selected_proxy';
-
   @override
   Stream<OutboundGroup?> build() async* {
     ref.disposeDelay(const Duration(seconds: 15));
     ref.watch(coreRestartSignalProvider);
     final serviceRunning = await ref.watch(serviceRunningProvider.future);
     if (!serviceRunning) {
-      // Service not running — try to yield cached server list
+      // Service not running — try cached server list
       final cached = _loadCache();
       if (cached != null) {
         loggy.info("service not running, using cached server list");
@@ -75,6 +73,23 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
       throw const ServiceNotRunning();
     }
     final sortBy = ref.watch(proxiesSortNotifierProvider);
+    // yield* ref
+    //     .watch(proxyRepositoryProvider)
+    //     .watchProxies()
+    //     .throttleTime(
+    //       const Duration(milliseconds: 100),
+    //       leading: false,
+    //       trailing: true,
+    //     )
+    //     .map(
+    //       (event) => event.getOrElse(
+    //         (err) {
+    //           loggy.warning("error receiving proxies", err);
+    //           throw err;
+    //         },
+    //       ),
+    //     )
+    //     .asyncMap((proxies) async => _sortOutbounds(proxies, sortBy));
     yield* ref
         .watch(proxyRepositoryProvider)
         .watchProxies()
@@ -92,6 +107,9 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
         });
   }
 
+  static const _cacheKey = 'proxies_cache_v1';
+  static const _selectedCacheKey = 'proxies_selected_cache';
+
   void _saveCache(OutboundGroup? group) {
     if (group == null) return;
     try {
@@ -108,34 +126,13 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
       final prefs = ref.read(sharedPreferencesProvider).requireValue;
       final json = prefs.getString(_cacheKey);
       if (json == null || json.isEmpty) return null;
-      final group = OutboundGroup.fromJson(json);
-      // Restore selected proxy from cache
-      final selected = prefs.getString(_selectedCacheKey);
-      if (selected != null && selected.isNotEmpty) {
-        group.selected = selected;
-      }
-      // Clear ping times — they're stale
-      for (final item in group.items) {
-        item.urlTestDelay = 0;
-      }
-      return group;
+      return OutboundGroup.fromJson(json);
     } catch (e) {
       loggy.warning("failed to load cached server list", e);
       return null;
     }
   }
 
-  /// Save user's server selection to cache (used when selecting from cached list while disconnected)
-  void cacheSelectedProxy(String tag) {
-    try {
-      final prefs = ref.read(sharedPreferencesProvider).requireValue;
-      prefs.setString(_selectedCacheKey, tag);
-    } catch (e) {
-      loggy.warning("failed to cache selected proxy", e);
-    }
-  }
-
-  /// Apply cached server selection after VPN starts (user chose server while disconnected)
   void _applyCachedSelection(OutboundGroup? group) {
     if (group == null) return;
     try {
@@ -143,15 +140,22 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
       final cachedTag = prefs.getString(_selectedCacheKey);
       if (cachedTag == null || cachedTag.isEmpty) return;
       if (cachedTag == group.selected) return;
-
       final exists = group.items.any((item) => item.tag == cachedTag);
       if (!exists) return;
-
       loggy.info("applying cached server selection: $cachedTag");
       changeProxy(group.tag, cachedTag);
       prefs.remove(_selectedCacheKey);
     } catch (e) {
       loggy.warning("failed to apply cached selection", e);
+    }
+  }
+
+  void cacheSelectedProxy(String outboundTag) {
+    try {
+      final prefs = ref.read(sharedPreferencesProvider).requireValue;
+      prefs.setString(_selectedCacheKey, outboundTag);
+    } catch (e) {
+      loggy.warning("failed to cache selected proxy", e);
     }
   }
 
