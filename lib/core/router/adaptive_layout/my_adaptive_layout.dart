@@ -55,30 +55,7 @@ class MyAdaptiveLayout extends HookConsumerWidget {
     }, [isMobileBreakpoint, showProfilesAction, navigationShell.currentIndex]);
     return Material(
       child: Scaffold(
-        body: isMobileBreakpoint
-            ? navigationShell
-            : Row(
-                children: [
-                  FocusScope(
-                    node: navScopeNode,
-                    child: NavigationRail(
-                      extended: Breakpoint(context).isDesktop(),
-                      destinations: _navRailDests(_actions(t, showProfilesAction, isMobileBreakpoint)),
-                      selectedIndex: navigationShell.currentIndex,
-                      onDestinationSelected: (index) => _onTap(context, index),
-                      trailing: Breakpoint(context).isDesktop()
-                          ? const Expanded(
-                              child: Align(
-                                alignment: Alignment.bottomCenter,
-                                child: SizedBox(width: 220, child: SideBarStatsOverview()),
-                              ),
-                            )
-                          : null,
-                    ),
-                  ),
-                  Expanded(child: navigationShell),
-                ],
-              ),
+        body: navigationShell, // Relokant: no sidebar, custom nav in home_page
         bottomNavigationBar: null, // Relokant: custom nav in home_page
       ),
     );
