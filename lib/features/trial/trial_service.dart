@@ -85,17 +85,23 @@ class TrialNotifier extends StateNotifier<TrialState> {
     var id = _prefs.getString(_keyDeviceId);
     if (id != null && id.isNotEmpty) return id;
 
-    // 2. Platform-persistent ID (survives app reinstall)
-    id = await _getPersistentDeviceId();
-    if (id != null && id.isNotEmpty) {
-      _prefs.setString(_keyDeviceId, id);
-      return id;
+    // 2. Platform-persistent ID (survives app reinstall) — with timeout to prevent iOS hang
+    try {
+      id = await _getPersistentDeviceId().timeout(const Duration(seconds: 3));
+      if (id != null && id.isNotEmpty) {
+        _prefs.setString(_keyDeviceId, id);
+        return id;
+      }
+    } catch (_) {
+      // Timeout or error — fall through to UUID
     }
 
     // 3. Generate new UUID, save everywhere
     id = const Uuid().v4().replaceAll('-', '').substring(0, 32);
     _prefs.setString(_keyDeviceId, id);
-    await _savePersistentDeviceId(id);
+    try {
+      await _savePersistentDeviceId(id).timeout(const Duration(seconds: 3));
+    } catch (_) {}
     return id;
   }
 
