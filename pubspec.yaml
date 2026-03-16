@@ -1,7 +1,7 @@
 name: hiddify
 description: Relokant VPN — Russian IP in 2 minutes.
 publish_to: "none"
-version: 4.1.0+41000
+version: 4.1.0+41010
 
 environment:
   sdk: ^3.10.4
