@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -110,28 +109,19 @@ class TrialNotifier extends StateNotifier<TrialState> {
       if (Platform.isAndroid) {
         // android_id (SSAID) — stable per device+app signing key, survives reinstall
         final info = await DeviceInfoPlugin().androidInfo;
-        // SSAID (Settings.Secure.ANDROID_ID) — stable per device+signing key
         final androidId = info.data['androidId'] as String?;
         if (androidId != null && androidId.isNotEmpty && androidId != 'unknown') {
           return androidId;
         }
-      } else if (Platform.isIOS) {
-        // iOS Keychain — survives reinstall
-        const storage = FlutterSecureStorage();
-        return await storage.read(key: _keyDeviceId);
       }
+      // iOS + desktop: use SharedPreferences (set in _getDeviceId)
     } catch (_) {}
     return null;
   }
 
   Future<void> _savePersistentDeviceId(String id) async {
-    try {
-      if (Platform.isIOS) {
-        const storage = FlutterSecureStorage();
-        await storage.write(key: _keyDeviceId, value: id);
-      }
-      // Android: android_id is read-only, no need to save
-    } catch (_) {}
+    // Android: android_id is read-only, no need to save
+    // iOS + desktop: SharedPreferences handles persistence
   }
 
   Future<String?> createTrial() async {

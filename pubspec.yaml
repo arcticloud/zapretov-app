@@ -64,7 +64,6 @@ dependencies:
   dartx: ^1.2.0
   uuid: ^4.3.3
   device_info_plus: ^11.0.0
-  flutter_secure_storage: ^9.2.0
   tint: ^2.0.1
   accessibility_tools: ^2.2.3
   neat_periodic_task: ^2.0.1
