@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 abstract class Constants {
-  static const appName = "Hiddify";
-  static const githubUrl = "https://github.com/hiddify/hiddify-next";
-  static const licenseUrl = "https://github.com/hiddify/hiddify-next?tab=License-1-ov-file#readme";
-  static const githubReleasesApiUrl = "https://api.github.com/repos/hiddify/hiddify-next/releases";
-  static const githubLatestReleaseUrl = "https://github.com/hiddify/hiddify-app/releases/latest";
-  static const appCastUrl = "https://raw.githubusercontent.com/hiddify/hiddify-next/main/appcast.xml";
-  static const telegramChannelUrl = "https://t.me/hiddify";
-  static const privacyPolicyUrl = "https://hiddify.com/privacy-policy/";
-  static const termsAndConditionsUrl = "https://hiddify.com/terms/";
+  static const appName = "Relokant VPN";
+  static const githubUrl = "https://relokant.net";
+  static const licenseUrl = "https://relokant.net/terms.html";
+  static const githubReleasesApiUrl = "https://api.github.com/repos/arcticloud/relokant-releases/releases";
+  static const githubLatestReleaseUrl = "https://github.com/arcticloud/relokant-releases/releases/latest";
+  static const appCastUrl = "https://raw.githubusercontent.com/arcticloud/relokant-releases/main/appcast.xml";
+  static const telegramChannelUrl = "https://t.me/relokant_net";
+  static const privacyPolicyUrl = "https://relokant.net/privacy.html";
+  static const termsAndConditionsUrl = "https://relokant.net/terms.html";
   static const cfWarpPrivacyPolicy = "https://www.cloudflare.com/application/privacypolicy/";
   static const cfWarpTermsOfService = "https://www.cloudflare.com/application/terms/";
+  static const pricingUrl = "https://relokant.net/#pricing";
 }
 
 const kAnimationDuration = Duration(milliseconds: 250);

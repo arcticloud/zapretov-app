@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "هیدیفای",
+    "appTitle": "Relokant VPN",
     "start": "شروع",
     "version": "نسخه",
     "ok": "باشه",
@@ -88,7 +88,7 @@
   "intro": {
     "banner": "هرآنچه برای اینترنت بدون محدودیت نیاز دارید",
     "termsAndPolicyCaution(rich)": "با ادامه، شما با ${tap(@:pages.about.termsAndConditions)} موافقت می‌کنید",
-    "info(rich)": "ساخته شده با ❤️ توسط هیدیفای - ${tap_source(متن‌باز)} (${tap_license(مجوز)})"
+    "info(rich)": "Relokant VPN - ${tap_source(relokant.net)} (${tap_license(مجوز)})"
   },
   "pages": {
     "home": {

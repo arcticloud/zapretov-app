@@ -42,9 +42,9 @@ class IntroPage extends HookConsumerWidget with PresLogger {
           (failure) {
             isTrialLoading.value = false;
             if (failure is ProfileInvalidUrlFailure) {
-              errorText.value = 'Invalid activation code';
+              errorText.value = 'Неверный код активации';
             } else {
-              errorText.value = 'Connection error. Try again.';
+              errorText.value = 'Ошибка подключения. Попробуйте ещё раз.';
             }
             loggy.warning('Activation failed: $failure');
           },
@@ -55,7 +55,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
         );
       } catch (e) {
         isTrialLoading.value = false;
-        errorText.value = 'Connection error. Try again.';
+        errorText.value = 'Ошибка подключения. Попробуйте ещё раз.';
         loggy.error('Activation error', e);
       }
     }
@@ -70,7 +70,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
       if (code == null) {
         isTrialLoading.value = false;
         errorText.value =
-            ref.read(trialProvider).error ?? 'Failed to create trial';
+            ref.read(trialProvider).error ?? 'Не удалось создать пробный доступ';
         return;
       }
 
@@ -88,7 +88,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo
+                // ─── Logo ───
                 Assets.images.logo.svg(
                   width: 72,
                   height: 72,
@@ -97,7 +97,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                 ),
                 const Gap(20),
 
-                // Relokant VPN
+                // ─── Relokant VPN ───
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -126,9 +126,9 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                 ),
                 const Gap(6),
 
-                // Subtitle
+                // ─── Subtitle ───
                 Text(
-                  'Secure access to Russian services\nfrom abroad',
+                  'Безопасный доступ к российским\nсервисам из-за рубежа',
                   style: TextStyle(
                     fontSize: 15,
                     color: Colors.white.withValues(alpha: 0.4),
@@ -138,7 +138,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                 ),
                 const Gap(40),
 
-                // Error
+                // ─── Error ───
                 if (errorText.value != null) ...[
                   Text(
                     errorText.value!,
@@ -148,7 +148,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                   const Gap(16),
                 ],
 
-                // PRIMARY: Connect (trial)
+                // ─── PRIMARY: Connect (trial) ───
                 SizedBox(
                   width: double.infinity,
                   height: 64,
@@ -175,14 +175,14 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Try for free',
+                                'Попробовать бесплатно',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                               Text(
-                                '3 days \u00B7 1 GB/day \u00B7 all servers',
+                                '3 дня · 1 ГБ/день · все серверы',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w400,
@@ -194,7 +194,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                 ),
                 const Gap(32),
 
-                // TERTIARY: Buy + Enter code
+                // ─── TERTIARY: Buy + Enter code ───
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -206,12 +206,12 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                         foregroundColor: Colors.white.withValues(alpha: 0.4),
                         textStyle: const TextStyle(fontSize: 13),
                       ),
-                      child: const Text('Buy subscription'),
+                      child: const Text('Купить подписку'),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Text(
-                        '\u00B7',
+                        '·',
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.white.withValues(alpha: 0.2),
@@ -228,7 +228,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                         foregroundColor: Colors.white.withValues(alpha: 0.4),
                         textStyle: const TextStyle(fontSize: 13),
                       ),
-                      child: const Text('Enter code'),
+                      child: const Text('Ввести код'),
                     ),
                   ],
                 ),
@@ -241,9 +241,9 @@ class IntroPage extends HookConsumerWidget with PresLogger {
   }
 }
 
-// ================================================================
-// Code Entry Page -- standalone page for activation code + email
-// ================================================================
+// ═══════════════════════════════════════════════════════════════
+// Code Entry Page — standalone page for activation code + email
+// ═══════════════════════════════════════════════════════════════
 
 class CodeEntryPage extends HookConsumerWidget with PresLogger {
   const CodeEntryPage({super.key, this.initialCode});
@@ -281,9 +281,9 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
           (failure) {
             isLoading.value = false;
             if (failure is ProfileInvalidUrlFailure) {
-              errorText.value = 'Invalid activation code';
+              errorText.value = 'Неверный код активации';
             } else {
-              errorText.value = 'Connection error. Try again.';
+              errorText.value = 'Ошибка подключения. Попробуйте ещё раз.';
             }
             loggy.warning('Activation failed: $failure');
           },
@@ -298,7 +298,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         );
       } catch (e) {
         isLoading.value = false;
-        errorText.value = 'Connection error. Try again.';
+        errorText.value = 'Ошибка подключения. Попробуйте ещё раз.';
         loggy.error('Activation error', e);
       }
     }
@@ -306,7 +306,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
     Future<void> activate() async {
       final code = codeController.text.trim().toUpperCase();
       if (code.isEmpty) {
-        errorText.value = 'Enter activation code';
+        errorText.value = 'Введите код активации';
         return;
       }
       await activateWithCode(code);
@@ -315,7 +315,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
     Future<void> sendRecoveryEmail() async {
       final email = emailController.text.trim().toLowerCase();
       if (email.isEmpty || !email.contains('@')) {
-        errorText.value = 'Enter a valid email';
+        errorText.value = 'Введите корректный email';
         return;
       }
 
@@ -339,11 +339,11 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         if (response.statusCode == 200) {
           emailSent.value = true;
         } else {
-          errorText.value = 'Error. Try later.';
+          errorText.value = 'Ошибка. Попробуйте позже.';
         }
       } catch (e) {
         isLoading.value = false;
-        errorText.value = 'Network error: $e';
+        errorText.value = 'Ошибка сети: $e';
       }
     }
 
@@ -400,10 +400,10 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
       key: const ValueKey('code'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.key_rounded, size: 36, color: _green),
+        const Text('🔑', style: TextStyle(fontSize: 36)),
         const Gap(16),
         const Text(
-          'Enter code',
+          'Ввод кода',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -412,7 +412,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(8),
         Text(
-          'Enter the 8-character code from\nemail or Telegram bot',
+          'Введите 8-значный код из email\nили Telegram-бота',
           style: TextStyle(
             fontSize: 14,
             color: Colors.white.withValues(alpha: 0.4),
@@ -422,7 +422,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(32),
 
-        // Code input
+        // ─── Code input ───
         TextField(
           controller: codeController,
           textAlign: TextAlign.center,
@@ -467,7 +467,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(20),
 
-        // Activate button
+        // ─── Activate button ───
         SizedBox(
           width: double.infinity,
           height: 52,
@@ -491,7 +491,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
                     ),
                   )
                 : const Text(
-                    'Activate',
+                    'Активировать',
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
@@ -499,14 +499,14 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(20),
 
-        // Divider
+        // ─── Divider ───
         Row(
           children: [
             Expanded(child: Divider(color: _border)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'forgot code?',
+                'забыли код?',
                 style: TextStyle(
                   fontSize: 13,
                   color: Colors.white.withValues(alpha: 0.25),
@@ -518,19 +518,19 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(20),
 
-        // Email recovery link
+        // ─── Email recovery link ───
         TextButton.icon(
           onPressed: () => showEmailForm.value = true,
           style: TextButton.styleFrom(foregroundColor: _green),
           icon: const Icon(Icons.email_outlined, size: 18),
           label: const Text(
-            'Send code to email',
+            'Отправить код на email',
             style: TextStyle(fontSize: 15),
           ),
         ),
         const Gap(4),
         Text(
-          'If you purchased -- code will be sent to your email',
+          'Если покупали — код придёт на почту',
           style: TextStyle(
             fontSize: 12,
             color: Colors.white.withValues(alpha: 0.25),
@@ -551,10 +551,10 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
       key: const ValueKey('email'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.email_outlined, size: 36, color: _green),
+        const Text('📧', style: TextStyle(fontSize: 36)),
         const Gap(16),
         const Text(
-          'Get code',
+          'Получить код',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -563,7 +563,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(8),
         Text(
-          'Enter the email used for\nyour subscription',
+          'Введите email, на который\nоформляли подписку',
           style: TextStyle(
             fontSize: 14,
             color: Colors.white.withValues(alpha: 0.4),
@@ -573,7 +573,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(32),
 
-        // Email input
+        // ─── Email input ───
         TextField(
           controller: emailController,
           textAlign: TextAlign.center,
@@ -611,7 +611,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(16),
 
-        // Send button
+        // ─── Send button ───
         SizedBox(
           width: double.infinity,
           height: 52,
@@ -635,7 +635,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
                     ),
                   )
                 : const Text(
-                    'Send',
+                    'Отправить',
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
@@ -644,7 +644,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         const Gap(16),
 
         Text(
-          'Code will be sent to the specified email.\nCheck your Spam folder.',
+          'Код будет отправлен на указанный email.\nПроверьте папку «Спам».',
           style: TextStyle(
             fontSize: 12,
             color: Colors.white.withValues(alpha: 0.25),
@@ -654,7 +654,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(24),
 
-        // Back to code entry
+        // ─── Back to code entry ───
         TextButton(
           onPressed: () {
             showEmailForm.value = false;
@@ -663,7 +663,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
           style: TextButton.styleFrom(
             foregroundColor: Colors.white.withValues(alpha: 0.4),
           ),
-          child: const Text('\u2190 Enter code manually'),
+          child: const Text('← Ввести код вручную'),
         ),
       ],
     );
@@ -689,7 +689,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(16),
         const Text(
-          'Code sent!',
+          'Код отправлен!',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -698,7 +698,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(8),
         Text(
-          'Check your email and enter\nthe code on the previous screen',
+          'Проверьте почту и введите\nкод на предыдущем экране',
           style: TextStyle(
             fontSize: 14,
             color: Colors.white.withValues(alpha: 0.4),
@@ -723,7 +723,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
               ),
             ),
             child: const Text(
-              'Enter code',
+              'Ввести код',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),

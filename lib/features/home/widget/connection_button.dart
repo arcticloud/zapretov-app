@@ -10,11 +10,11 @@ import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
-
+import 'package:hiddify/features/purchase/purchase_page.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
 import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
-
+import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -139,7 +139,11 @@ class ConnectionButton extends HookConsumerWidget {
                 child: FilledButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    UriUtils.tryLaunch(Uri.parse('https://relokant.net/#pricing'));
+                    if (Platform.isIOS || Platform.isAndroid) {
+                      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PurchasePage()));
+                    } else {
+                      UriUtils.tryLaunch(Uri.parse(Constants.pricingUrl));
+                    }
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF00E5A0),

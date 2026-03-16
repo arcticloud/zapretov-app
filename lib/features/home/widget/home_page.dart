@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:circle_flags/circle_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/core/theme/app_theme_mode.dart';
 import 'package:hiddify/core/theme/theme_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
@@ -13,7 +14,7 @@ import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
 import 'package:hiddify/features/account/account_page.dart';
-
+import 'package:hiddify/features/purchase/purchase_page.dart';
 import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
@@ -27,7 +28,13 @@ void _openAccount(BuildContext context) {
 }
 
 void _openPurchase(BuildContext context) {
-  UriUtils.tryLaunch(Uri.parse('https://relokant.net/#pricing'));
+  if (Platform.isIOS || Platform.isAndroid) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const PurchasePage()),
+    );
+  } else {
+    UriUtils.tryLaunch(Uri.parse(Constants.pricingUrl));
+  }
 }
 
 class HomePage extends HookConsumerWidget {
