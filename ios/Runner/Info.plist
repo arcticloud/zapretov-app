@@ -77,6 +77,8 @@
 		</array>
 		<key>NSLocalNetworkUsageDescription</key>
 		<string>Relokant needs access to local network to establish secure VPN connections.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Relokant may need access to your photo library to save QR codes or configuration files.</string>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
 		<key>CFBundleLocalizations</key>
