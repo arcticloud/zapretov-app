@@ -135,6 +135,7 @@ class TrialNotifier extends StateNotifier<TrialState> {
       final deviceId = await _getDeviceId();
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 10);
+      client.findProxy = (uri) => 'DIRECT';
       final request = await client.postUrl(Uri.parse('$_apiBase/api/trial'));
       request.headers.contentType = ContentType.json;
       request.write(jsonEncode({'device_id': deviceId, 'platform': Platform.operatingSystem}));
@@ -173,7 +174,7 @@ class TrialNotifier extends StateNotifier<TrialState> {
 
       return code;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Ошибка сети: $e');
+      state = state.copyWith(isLoading: false, error: 'Ошибка: ${e.runtimeType}: $e');
       return null;
     }
   }
