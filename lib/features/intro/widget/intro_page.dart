@@ -14,7 +14,6 @@ import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/features/intro/widget/vpn_permission_prompt.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class IntroPage extends HookConsumerWidget with PresLogger {
@@ -31,6 +30,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
   Widget build(BuildContext context, WidgetRef ref) {
     final isTrialLoading = useState(false);
     final errorText = useState<String?>(null);
+    final showVpnPrompt = useState(Platform.isIOS);
 
     Future<void> activateWithCode(String code) async {
       try {
@@ -77,23 +77,14 @@ class IntroPage extends HookConsumerWidget with PresLogger {
       }
 
       isTrialLoading.value = false;
-
-      // iOS: show VPN permission hint before activation triggers system dialog
-      if (Platform.isIOS && context.mounted) {
-        final prefs = await SharedPreferences.getInstance();
-        if (!prefs.containsKey('vpn_permission_shown')) {
-          await Navigator.of(context).push<void>(
-            MaterialPageRoute(
-              builder: (_) => VpnPermissionPrompt(
-                onContinue: () => Navigator.of(context).pop(),
-              ),
-            ),
-          );
-          await prefs.setBool('vpn_permission_shown', true);
-        }
-      }
-
       await activateWithCode(code);
+    }
+
+    // iOS: show VPN permission hint as the very first screen
+    if (showVpnPrompt.value) {
+      return VpnPermissionPrompt(
+        onContinue: () => showVpnPrompt.value = false,
+      );
     }
 
     return Scaffold(
@@ -287,21 +278,6 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
     Future<void> activateWithCode(String code) async {
       isLoading.value = true;
       errorText.value = null;
-
-      // iOS: show VPN permission hint before activation
-      if (Platform.isIOS && context.mounted) {
-        final prefs = await SharedPreferences.getInstance();
-        if (!prefs.containsKey('vpn_permission_shown')) {
-          await Navigator.of(context).push<void>(
-            MaterialPageRoute(
-              builder: (_) => VpnPermissionPrompt(
-                onContinue: () => Navigator.of(context).pop(),
-              ),
-            ),
-          );
-          await prefs.setBool('vpn_permission_shown', true);
-        }
-      }
 
       try {
         final subUrl = '$_serverBase/activate/$code';
