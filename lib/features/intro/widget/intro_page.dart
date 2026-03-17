@@ -11,8 +11,10 @@ import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/model/profile_failure.dart';
 import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hiddify/gen/assets.gen.dart';
+import 'package:hiddify/features/intro/widget/vpn_permission_prompt.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class IntroPage extends HookConsumerWidget with PresLogger {
@@ -75,6 +77,22 @@ class IntroPage extends HookConsumerWidget with PresLogger {
       }
 
       isTrialLoading.value = false;
+
+      // iOS: show VPN permission hint before activation triggers system dialog
+      if (Platform.isIOS && context.mounted) {
+        final prefs = await SharedPreferences.getInstance();
+        if (!prefs.containsKey('vpn_permission_shown')) {
+          await Navigator.of(context).push<void>(
+            MaterialPageRoute(
+              builder: (_) => VpnPermissionPrompt(
+                onContinue: () => Navigator.of(context).pop(),
+              ),
+            ),
+          );
+          await prefs.setBool('vpn_permission_shown', true);
+        }
+      }
+
       await activateWithCode(code);
     }
 
@@ -269,6 +287,21 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
     Future<void> activateWithCode(String code) async {
       isLoading.value = true;
       errorText.value = null;
+
+      // iOS: show VPN permission hint before activation
+      if (Platform.isIOS && context.mounted) {
+        final prefs = await SharedPreferences.getInstance();
+        if (!prefs.containsKey('vpn_permission_shown')) {
+          await Navigator.of(context).push<void>(
+            MaterialPageRoute(
+              builder: (_) => VpnPermissionPrompt(
+                onContinue: () => Navigator.of(context).pop(),
+              ),
+            ),
+          );
+          await prefs.setBool('vpn_permission_shown', true);
+        }
+      }
 
       try {
         final subUrl = '$_serverBase/activate/$code';
