@@ -12,7 +12,9 @@ import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/purchase/purchase_page.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
+import 'package:hiddify/features/intro/widget/vpn_permission_prompt.dart';
 import 'package:hiddify/features/trial/trial_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -68,6 +70,22 @@ class ConnectionButton extends HookConsumerWidget {
         if (ref.read(activeProfileProvider).valueOrNull == null) {
           await ref.read(dialogNotifierProvider.notifier).showNoActiveProfile();
           ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile();
+        }
+        // iOS: show VPN permission hint before first connect
+        if (Platform.isIOS) {
+          final prefs = await SharedPreferences.getInstance();
+          if (!prefs.containsKey('vpn_permission_shown')) {
+            if (context.mounted) {
+              await Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => VpnPermissionPrompt(
+                    onContinue: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              );
+            }
+            await prefs.setBool('vpn_permission_shown', true);
+          }
         }
         if (await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
           return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
