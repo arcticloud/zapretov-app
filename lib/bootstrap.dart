@@ -33,69 +33,96 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   if (!kIsWeb) {
     FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   }
+
+  final container = ProviderContainer(overrides: [environmentProvider.overrideWithValue(env)]);
+
+  try {
+    await _doBootstrap(widgetsBinding, env, container);
+  } catch (e, stackTrace) {
+    try {
+      Logger.bootstrap.error("bootstrap failed, launching app anyway", e, stackTrace);
+    } catch (_) {}
+  }
+
+  // ALWAYS run the app and remove splash, no matter what happened above
+  runApp(
+    ProviderScope(
+      parent: container,
+      observers: [RiverpodObserver()],
+      child: SentryUserInteractionWidget(child: const App()),
+    ),
+  );
+
+  if (!kIsWeb) {
+    try {
+      FlutterNativeSplash.remove();
+    } catch (_) {}
+  }
+}
+
+Future<void> _doBootstrap(WidgetsBinding widgetsBinding, Environment env, ProviderContainer container) async {
   LoggerController.preInit();
   FlutterError.onError = Logger.logFlutterError;
   WidgetsBinding.instance.platformDispatcher.onError = Logger.logPlatformDispatcherError;
 
   final stopWatch = Stopwatch()..start();
 
-  final container = ProviderContainer(overrides: [environmentProvider.overrideWithValue(env)]);
+  await _safeInit("directories", () => container.read(appDirectoriesProvider.future), timeout: 5000);
+  try {
+    LoggerController.init(container.read(logPathResolverProvider).appFile().path);
+  } catch (_) {}
 
-  await _init("directories", () => container.read(appDirectoriesProvider.future));
-  LoggerController.init(container.read(logPathResolverProvider).appFile().path);
+  final appInfo = await _safeInit("app info", () => container.read(appInfoProvider.future), timeout: 5000);
+  await _safeInit("preferences", () => container.read(sharedPreferencesProvider.future), timeout: 5000);
 
-  final appInfo = await _init("app info", () => container.read(appInfoProvider.future));
-  await _init("preferences", () => container.read(sharedPreferencesProvider.future));
+  await _safeInit("analytics", () async {
+    final enableAnalytics = await container.read(analyticsControllerProvider.future);
+    if (enableAnalytics) {
+      await container.read(analyticsControllerProvider.notifier).enableAnalytics();
+    }
+  }, timeout: 5000);
 
-  final enableAnalytics = await container.read(analyticsControllerProvider.future);
-  if (enableAnalytics) {
-    await _init("analytics", () => container.read(analyticsControllerProvider.notifier).enableAnalytics());
-  }
-
-  await _init("preferences migration", () async {
+  await _safeInit("preferences migration", () async {
     try {
       await PreferencesMigration(sharedPreferences: container.read(sharedPreferencesProvider).requireValue).migrate();
     } catch (e, stackTrace) {
       Logger.bootstrap.error("preferences migration failed", e, stackTrace);
-      if (env == Environment.dev) rethrow;
       Logger.bootstrap.info("clearing preferences");
       await container.read(sharedPreferencesProvider).requireValue.clear();
     }
-  });
+  }, timeout: 5000);
 
   final debug = container.read(debugModeNotifierProvider) || kDebugMode;
 
   if (PlatformUtils.isDesktop) {
-    await _init("window controller", () => container.read(windowNotifierProvider.future));
+    await _safeInit("window controller", () => container.read(windowNotifierProvider.future), timeout: 5000);
 
     final silentStart = container.read(Preferences.silentStart);
     Logger.bootstrap.debug("silent start [${silentStart ? "Enabled" : "Disabled"}]");
     if (!silentStart) {
-      await container.read(windowNotifierProvider.notifier).show(focus: false);
+      try {
+        await container.read(windowNotifierProvider.notifier).show(focus: false);
+      } catch (_) {}
     } else {
       Logger.bootstrap.debug("silent start, remain hidden accessible via tray");
     }
-    await _init("auto start service", () => container.read(autoStartNotifierProvider.future));
+    await _safeInit("auto start service", () => container.read(autoStartNotifierProvider.future), timeout: 3000);
   }
-  await _init("logs repository", () => container.read(logRepositoryProvider.future));
-  await _init("logger controller", () => LoggerController.postInit(debug));
+  await _safeInit("logs repository", () => container.read(logRepositoryProvider.future), timeout: 5000);
+  await _safeInit("logger controller", () => LoggerController.postInit(debug), timeout: 3000);
 
-  Logger.bootstrap.info(appInfo.format());
+  if (appInfo != null) {
+    Logger.bootstrap.info(appInfo.format());
+  }
 
-  await _init("profile repository", () => container.read(profileRepositoryProvider.future));
+  await _safeInit("profile repository", () => container.read(profileRepositoryProvider.future), timeout: 10000);
 
-  await _init("translations", () => container.read(translationsProvider.future));
+  await _safeInit("translations", () => container.read(translationsProvider.future), timeout: 5000);
 
   await _safeInit("active profile", () => container.read(activeProfileProvider.future), timeout: 1000);
-  await _init("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init());
+  await _safeInit("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init(), timeout: 15000);
 
   if (!kIsWeb) {
-    // await _safeInit(
-    //   "deep link service",
-    //   () => container.read(deepLinkNotifierProvider.future),
-    //   timeout: 1000,
-    // );
-
     if (PlatformUtils.isDesktop) {
       await _safeInit("system tray", () => container.read(systemTrayNotifierProvider.future), timeout: 1000);
     }
@@ -109,19 +136,6 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
 
   Logger.bootstrap.info("bootstrap took [${stopWatch.elapsedMilliseconds}ms]");
   stopWatch.stop();
-
-  runApp(
-    ProviderScope(
-      parent: container,
-      observers: [RiverpodObserver()],
-      child: SentryUserInteractionWidget(child: const App()),
-    ),
-  );
-
-  if (!kIsWeb) {
-    FlutterNativeSplash.remove();
-  }
-  // SentryFlutter.s(DateTime.now().toUtc());
 }
 
 Future<T> _init<T>(String name, Future<T> Function() initializer, {int? timeout}) async {
