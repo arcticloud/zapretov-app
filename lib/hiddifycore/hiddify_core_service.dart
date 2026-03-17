@@ -6,7 +6,6 @@ import 'package:fpdart/fpdart.dart';
 import 'package:grpc/grpc.dart';
 import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/core/model/directories.dart';
-import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
@@ -46,10 +45,8 @@ class HiddifyCoreService with InfraLogger {
   Future<void> init() async {
     await setup()
         .mapLeft((e) {
-          loggy.error(e);
-          if (PlatformUtils.isIOS) return;
+          loggy.error("Hiddify-core setup FAILED: $e");
           statusController.add(const CoreStatus.stopped());
-          ref.read(inAppNotificationControllerProvider).showErrorToast(e);
         })
         .map((_) {
           loggy.info("Hiddify-core setup done");
@@ -66,13 +63,24 @@ class HiddifyCoreService with InfraLogger {
 
   TaskEither<String, Unit> validateConfigByPath(String path, String tempPath, bool debug) {
     return TaskEither(() async {
-      try {
-        final response = await core.fgClient.parse(ParseRequest(tempPath: tempPath, configPath: path, debug: false));
-        if (response.responseCode != ResponseCode.OK) return left("${response.responseCode} ${response.message}");
-      } catch (e) {
-        await setup().run();
-        final response = await core.fgClient.parse(ParseRequest(tempPath: tempPath, configPath: path, debug: false));
-        if (response.responseCode != ResponseCode.OK) return left("${response.responseCode} ${response.message}");
+      for (var attempt = 0; attempt < 3; attempt++) {
+        try {
+          final response = await core.fgClient.parse(
+            ParseRequest(tempPath: tempPath, configPath: path, debug: false),
+          );
+          if (response.responseCode != ResponseCode.OK) {
+            return left("${response.responseCode} ${response.message}");
+          }
+          return right(unit);
+        } catch (e) {
+          loggy.warning("validateConfig attempt ${attempt + 1}/3 failed: $e");
+          if (attempt < 2) {
+            await setup().run();
+            await Future.delayed(Duration(seconds: attempt + 1));
+          } else {
+            return left("gRPC unavailable after retries: $e");
+          }
+        }
       }
       return right(unit);
     });

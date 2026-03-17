@@ -44,7 +44,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
             if (failure is ProfileInvalidUrlFailure) {
               errorText.value = 'Неверный код активации';
             } else {
-              errorText.value = 'Ошибка подключения. Попробуйте ещё раз.';
+              errorText.value = 'Ошибка: $failure';
             }
             loggy.warning('Activation failed: $failure');
           },

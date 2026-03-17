@@ -120,7 +120,7 @@ Future<void> _doBootstrap(WidgetsBinding widgetsBinding, Environment env, Provid
   await _safeInit("translations", () => container.read(translationsProvider.future), timeout: 5000);
 
   await _safeInit("active profile", () => container.read(activeProfileProvider.future), timeout: 1000);
-  await _safeInit("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init(), timeout: 15000);
+  await _safeInit("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init(), timeout: 30000);
 
   if (!kIsWeb) {
     if (PlatformUtils.isDesktop) {
