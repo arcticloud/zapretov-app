@@ -53,10 +53,10 @@ class IntroPage extends HookConsumerWidget with PresLogger {
             await ref.read(Preferences.introCompleted.notifier).update(true);
           },
         );
-      } catch (e) {
+      } catch (e, st) {
         isTrialLoading.value = false;
-        errorText.value = 'Ошибка подключения. Попробуйте ещё раз.';
-        loggy.error('Activation error', e);
+        errorText.value = 'catch: ${e.runtimeType}: $e';
+        loggy.error('Activation error', e, st);
       }
     }
 
