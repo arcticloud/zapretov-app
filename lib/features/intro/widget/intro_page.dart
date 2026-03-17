@@ -11,6 +11,7 @@ import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/model/profile_failure.dart';
 import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hiddify/gen/assets.gen.dart';
+import 'package:hiddify/features/intro/widget/vpn_permission_prompt.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -50,6 +51,15 @@ class IntroPage extends HookConsumerWidget with PresLogger {
           },
           (_) async {
             loggy.info('Activation successful');
+            if (VpnPermissionPrompt.shouldShow() && context.mounted) {
+              await Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => VpnPermissionPrompt(
+                    onContinue: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              );
+            }
             await ref.read(Preferences.introCompleted.notifier).update(true);
           },
         );
