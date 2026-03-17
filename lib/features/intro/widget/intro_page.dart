@@ -11,7 +11,6 @@ import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/model/profile_failure.dart';
 import 'package:hiddify/features/trial/trial_service.dart';
 import 'package:hiddify/gen/assets.gen.dart';
-import 'package:hiddify/features/intro/widget/vpn_permission_prompt.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -30,7 +29,6 @@ class IntroPage extends HookConsumerWidget with PresLogger {
   Widget build(BuildContext context, WidgetRef ref) {
     final isTrialLoading = useState(false);
     final errorText = useState<String?>(null);
-    final showVpnPrompt = useState(Platform.isIOS);
 
     Future<void> activateWithCode(String code) async {
       try {
@@ -78,13 +76,6 @@ class IntroPage extends HookConsumerWidget with PresLogger {
 
       isTrialLoading.value = false;
       await activateWithCode(code);
-    }
-
-    // iOS: show VPN permission hint as the very first screen
-    if (showVpnPrompt.value) {
-      return VpnPermissionPrompt(
-        onContinue: () => showVpnPrompt.value = false,
-      );
     }
 
     return Scaffold(

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hiddify/features/intro/widget/vpn_permission_prompt.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:hiddify/core/analytics/analytics_controller.dart';
@@ -120,6 +121,24 @@ Future<void> _doBootstrap(WidgetsBinding widgetsBinding, Environment env, Provid
   await _safeInit("translations", () => container.read(translationsProvider.future), timeout: 5000);
 
   await _safeInit("active profile", () => container.read(activeProfileProvider.future), timeout: 1000);
+
+  // iOS first launch: show VPN permission prompt BEFORE core init triggers system VPN dialog
+  if (!kIsWeb && Platform.isIOS) {
+    try {
+      final prefs = container.read(sharedPreferencesProvider).requireValue;
+      if (!prefs.containsKey('vpn_permission_shown')) {
+        final completer = Completer<void>();
+        try { FlutterNativeSplash.remove(); } catch (_) {}
+        runApp(MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: VpnPermissionPrompt(onContinue: () => completer.complete()),
+        ));
+        await completer.future;
+        await prefs.setBool('vpn_permission_shown', true);
+      }
+    } catch (_) {}
+  }
+
   await _safeInit("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init(), timeout: 30000);
 
   if (!kIsWeb) {
