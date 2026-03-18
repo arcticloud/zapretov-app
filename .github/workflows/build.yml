@@ -257,6 +257,8 @@ jobs:
 
   build-macos:
     runs-on: macos-latest
+    env:
+      HAS_MACOS_SIGNING: ${{ secrets.MACOS_DEVELOPER_ID_P12 != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -276,12 +278,86 @@ jobs:
       - name: Prepare
         run: make macos-prepare
 
-      - name: Build macOS DMG
+      - name: Setup macOS signing
+        if: env.HAS_MACOS_SIGNING == 'true'
+        env:
+          P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12 }}
+          P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ci_keychain_password
+        run: |
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          echo "$P12_BASE64" | base64 --decode > certificate.p12
+          security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+
+      - name: Build macOS app
+        run: |
+          flutter build macos --dart-define sentry_dsn= --dart-define FLUTTER_BUILD_NAME=4.1.0 --dart-define FLUTTER_BUILD_NUMBER=41000
+
+      - name: Sign macOS app
+        if: env.HAS_MACOS_SIGNING == 'true'
+        run: |
+          APP_PATH="build/macos/Build/Products/Release/Relokant VPN.app"
+          # Sign all frameworks and dylibs first, then the app
+          find "$APP_PATH" -name "*.dylib" -o -name "*.framework" | while read f; do
+            codesign --deep --force --options runtime --sign "Developer ID Application: Nikita Popov (AQTX2SH8S4)" "$f" || true
+          done
+          codesign --deep --force --options runtime --sign "Developer ID Application: Nikita Popov (AQTX2SH8S4)" "$APP_PATH"
+          # Verify
+          codesign --verify --deep --strict "$APP_PATH"
+          echo "Signing verified OK"
+
+      - name: Create DMG
+        run: |
+          mkdir -p out
+          APP_PATH="build/macos/Build/Products/Release/Relokant VPN.app"
+          create-dmg \
+            --volname "Relokant VPN" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "Relokant VPN.app" 150 190 \
+            --app-drop-link 450 190 \
+            out/Relokant-macOS.dmg \
+            "$APP_PATH" || true
+          # Fallback: simple DMG if create-dmg fails
+          if [ ! -f out/Relokant-macOS.dmg ]; then
+            hdiutil create -volname "Relokant VPN" -srcfolder "$APP_PATH" -ov -format UDZO out/Relokant-macOS.dmg
+          fi
+          ls -la out/
+
+      - name: Sign DMG
+        if: env.HAS_MACOS_SIGNING == 'true'
+        run: |
+          codesign --force --sign "Developer ID Application: Nikita Popov (AQTX2SH8S4)" out/Relokant-macOS.dmg
+
+      - name: Notarize DMG
+        if: env.HAS_MACOS_SIGNING == 'true'
+        env:
+          API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          # Setup API key for notarytool
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8
+          # Submit for notarization
+          xcrun notarytool submit out/Relokant-macOS.dmg \
+            --key ~/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8 \
+            --key-id "$API_KEY_ID" \
+            --issuer "$API_ISSUER_ID" \
+            --wait --timeout 600
+          # Staple the notarization ticket
+          xcrun stapler staple out/Relokant-macOS.dmg
+          echo "Notarization complete"
+
+      - name: Build unsigned DMG (fallback)
+        if: env.HAS_MACOS_SIGNING != 'true'
         run: |
           fastforge package --platform macos --targets dmg --skip-clean --build-target=lib/main.dart --build-dart-define=sentry_dsn=
-
-      - name: Collect DMG
-        run: |
           mkdir -p out
           cp dist/*/*.dmg out/Relokant-macOS.dmg || true
           ls -la out/
