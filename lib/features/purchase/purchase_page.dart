@@ -109,7 +109,7 @@ class PurchasePage extends ConsumerWidget {
             title: 'Базовый',
             price: personalMonthlyPrice,
             period: '/мес',
-            deviceCount: '1 устройство',
+            deviceCount: '2 устройства',
             regions: 'Россия',
             features: const [
               (label: 'Серверы в России', included: true),

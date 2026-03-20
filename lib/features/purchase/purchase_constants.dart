@@ -23,21 +23,21 @@ abstract class PurchaseConstants {
   static const productMeta = <String, ProductMeta>{
     personalMonthly: ProductMeta(
       plan: 'personal',
-      name: 'Личный',
+      name: 'Базовый',
       devices: 2,
       period: '1 месяц',
       fallbackPrice: '\$6.99',
     ),
     personalQuarterly: ProductMeta(
       plan: 'personal',
-      name: 'Личный',
+      name: 'Базовый',
       devices: 2,
       period: '3 месяца',
       fallbackPrice: '\$17.99',
     ),
     personalYearly: ProductMeta(
       plan: 'personal',
-      name: 'Личный',
+      name: 'Базовый',
       devices: 2,
       period: '1 год',
       fallbackPrice: '\$59.99',

@@ -39,7 +39,7 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
   }
 
   void onPause(WidgetRef ref) {
-    if (PlatformUtils.isDesktop) return;
+    if (PlatformUtils.isDesktop || PlatformUtils.isIOS) return;
     isOnPauseCalled = true;
     ref.read(hiddifyCoreServiceProvider).closeFront();
   }

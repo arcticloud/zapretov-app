@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
+import 'package:hiddify/core/http_client/http_client_provider.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
@@ -280,6 +281,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         result.match(
           (failure) {
             isLoading.value = false;
+            ref.invalidate(httpClientProvider);
             if (failure is ProfileInvalidUrlFailure) {
               errorText.value = 'Неверный код активации';
             } else {
@@ -298,6 +300,7 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         );
       } catch (e) {
         isLoading.value = false;
+        ref.invalidate(httpClientProvider);
         errorText.value = 'Ошибка подключения. Попробуйте ещё раз.';
         loggy.error('Activation error', e);
       }
