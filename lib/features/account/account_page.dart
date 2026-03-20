@@ -942,13 +942,13 @@ class _AccountPageState extends ConsumerState<AccountPage> {
 
     // Show "Enter code" for trial users, expired, or when API failed
     final trialState = ref.read(trialProvider);
-    if (info == null || trialState.isTrial || !info.isActive) {
+    {
       tiles.add(_TileData(
         icon: Icons.key_rounded,
         iconBg: isDark ? const Color(0xFF1A2E1A) : const Color(0xFFF0FFF4),
         iconColor: _green,
-        label: 'Ввести код активации',
-        sub: 'Купили подписку? Введите код',
+        label: info?.isActive == true ? 'Сменить код активации' : 'Ввести код активации',
+        sub: info?.isActive == true ? 'Ввести другой код' : 'Купили подписку? Введите код',
         onTap: () async {
           await Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const CodeEntryPage()),
