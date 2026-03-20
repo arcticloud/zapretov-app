@@ -8,6 +8,7 @@ on:
 env:
   FLUTTER_VERSION: '3.38.5'
   CHANNEL: 'dev'
+  APP_VERSION: '4.1.0'
 
 jobs:
   build-android:
@@ -131,7 +132,8 @@ jobs:
         if: env.HAS_IOS_SIGNING == 'true'
         run: |
           # Build Flutter iOS app (archive only, no export yet)
-          flutter build ios --no-codesign --dart-define sentry_dsn= --dart-define FLUTTER_BUILD_NAME=4.1.0 --dart-define FLUTTER_BUILD_NUMBER=41022
+          BUILD_NUM=$((41000 + ${{ github.run_number }}))
+          flutter build ios --no-codesign --dart-define sentry_dsn= --dart-define FLUTTER_BUILD_NAME=${{ env.APP_VERSION }} --dart-define FLUTTER_BUILD_NUMBER=$BUILD_NUM
 
           # Archive with Xcode using automatic signing + API key
           xcodebuild -workspace ios/Runner.xcworkspace \
@@ -295,7 +297,8 @@ jobs:
 
       - name: Build macOS app
         run: |
-          flutter build macos --dart-define sentry_dsn= --dart-define FLUTTER_BUILD_NAME=4.1.0 --dart-define FLUTTER_BUILD_NUMBER=41022
+          BUILD_NUM=$((41000 + ${{ github.run_number }}))
+          flutter build macos --dart-define sentry_dsn= --dart-define FLUTTER_BUILD_NAME=${{ env.APP_VERSION }} --dart-define FLUTTER_BUILD_NUMBER=$BUILD_NUM
 
       - name: Sign macOS app
         if: env.HAS_MACOS_SIGNING == 'true'
