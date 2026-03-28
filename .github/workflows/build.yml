@@ -31,7 +31,7 @@ jobs:
 
       - uses: android-actions/setup-android@v3
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
@@ -89,7 +89,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
@@ -192,7 +192,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
@@ -264,7 +264,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
