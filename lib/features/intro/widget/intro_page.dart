@@ -521,10 +521,21 @@ class CodeEntryPage extends HookConsumerWidget with PresLogger {
         ),
         const Gap(20),
 
+        // ─── Telegram bot link ───
+        TextButton.icon(
+          onPressed: () => launchUrl(Uri.parse('https://t.me/relokant_net_bot'), mode: LaunchMode.externalApplication),
+          style: TextButton.styleFrom(foregroundColor: _green),
+          icon: const Icon(Icons.send_rounded, size: 18),
+          label: const Text(
+            'Получить код в Telegram',
+            style: TextStyle(fontSize: 15),
+          ),
+        ),
+        const Gap(12),
         // ─── Email recovery link ───
         TextButton.icon(
           onPressed: () => showEmailForm.value = true,
-          style: TextButton.styleFrom(foregroundColor: _green),
+          style: TextButton.styleFrom(foregroundColor: Colors.white.withValues(alpha: 0.4)),
           icon: const Icon(Icons.email_outlined, size: 18),
           label: const Text(
             'Отправить код на email',

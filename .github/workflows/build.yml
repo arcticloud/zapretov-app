@@ -228,28 +228,6 @@ jobs:
           cp dist/*/*.exe out/Relokant-Windows-Setup.exe || true
           ls -la out/
 
-      - name: Build Windows exe installer (Pro — TUN + admin)
-        shell: bash
-        run: |
-          # Swap manifest to requireAdministrator
-          cp windows/runner/runner.exe.manifest windows/runner/runner.exe.manifest.bak
-          cp windows/runner/runner.exe.manifest.admin windows/runner/runner.exe.manifest
-          # Clean previous build
-          rm -rf dist build/windows
-
-      - name: Build Pro
-        run: |
-          $env:PATH += ";C:\Program Files (x86)\Inno Setup 6;$env:PUB_CACHE\bin"
-          fastforge package --platform windows --targets exe --skip-clean --build-target=lib/main.dart --build-dart-define=sentry_dsn= --build-dart-define=ENABLE_TUN=true
-
-      - name: Collect Pro installer
-        shell: bash
-        run: |
-          cp dist/*/*.exe out/Relokant-Windows-Pro-Setup.exe || true
-          # Restore original manifest
-          mv windows/runner/runner.exe.manifest.bak windows/runner/runner.exe.manifest
-          ls -la out/
-
       - name: Upload Windows installers
         uses: actions/upload-artifact@v4
         with:

@@ -948,7 +948,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
         iconBg: isDark ? const Color(0xFF1A2E1A) : const Color(0xFFF0FFF4),
         iconColor: _green,
         label: info?.isActive == true ? 'Сменить код активации' : 'Ввести код активации',
-        sub: info?.isActive == true ? 'Ввести другой код' : 'Купили подписку? Введите код',
+        sub: 'Код в @relokant_net_bot или на email',
         onTap: () async {
           await Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const CodeEntryPage()),
@@ -963,7 +963,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
       icon: Icons.shopping_cart_rounded,
       iconBg: isDark ? const Color(0xFF0C2912) : const Color(0xFFECFDF5),
       iconColor: _green,
-      label: info != null && info.isActive ? 'Сменить тариф' : 'Купить подписку',
+      label: 'Купить подписку',
       sub: info != null && info.upgrades.isNotEmpty
           ? info.upgrades.map((u) => u.name).join(', ')
           : 'Выбрать тариф и оплатить',
